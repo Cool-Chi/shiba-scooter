@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shiba Speedway — 柴犬「咚咚」騎滑板車 2D 物理模擬器</title>
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome 6.7.2 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,600;0,700;1,700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+      box-sizing: border-box;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #0f172a;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    .font-tech {
+      font-family: 'Chakra Petch', monospace;
+    }
+    /* Glassmorphism Styles */
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.68);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.45), inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+    }
+    .glass-pill {
+      background: rgba(30, 41, 59, 0.65);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-pill:hover {
+      background: rgba(51, 65, 85, 0.8);
+      border-color: rgba(255, 255, 255, 0.28);
+      transform: translateY(-1px);
+    }
+    .glass-pill.active {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.88), rgba(234, 88, 12, 0.88));
+      border-color: rgba(253, 224, 71, 0.7);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.45);
+    }
+    /* Custom Range Sliders */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fbbf24;
+      border: 2px solid #ffffff;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(251, 191, 36, 0.7);
+      transition: transform 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+    /* Custom Scrollbar for Control Panel */
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
+    }
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 14px rgba(251, 191, 36, 0.45); }
+      50% { box-shadow: 0 0 26px rgba(251, 191, 36, 0.85); }
+    }
+    .btn-action {
+      animation: pulse-glow 2.5s infinite;
+    }
+  </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden text-slate-100">
+
+  <!-- Fullscreen Interactive Canvas -->
+  <canvas id="simCanvas" class="block w-full h-full cursor-crosshair"></canvas>
+
+  <!-- TOP TELEMETRY BAR (即時數據看板) -->
+  <header class="fixed top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
+    <!-- Brand & Rider Tag -->
+    <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
+        <i class="fa-solid fa-dog text-white text-xl"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-black tracking-wide text-base text-white">SHIBA SPEEDWAY</h1>
+          <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+            Rider: 咚咚
+          </span>
+        </div>
+        <p class="text-xs text-slate-300/80">點擊路面放置障礙物 · 空白鍵按喇叭 · F 鍵餵食</p>
+      </div>
+    </div>
+
+    <!-- Real-time Telemetry Readouts -->
+    <div class="glass-panel px-5 py-2.5 rounded-2xl flex flex-wrap items-center gap-5 md:gap-7 pointer-events-auto">
+      <!-- Speed -->
+      <div class="flex items-center gap-2.5">
+        <i class="fa-solid fa-gauge-high text-amber-400 text-lg"></i>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">時速 Speed</div>
+          <div class="font-tech text-xl font-bold text-white leading-tight">
+            <span id="teleSpeed">45</span> <span class="text-xs font-normal text-slate-300">km/h</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-7 w-[1px] bg-white/10 hidden sm:block"></div>
+
+      <!-- Distance -->
+      <div class="flex items-center gap-2.5">
+        <i class="fa-solid fa-route text-sky-400 text-lg"></i>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">距離 Distance</div>
+          <div class="font-tech text-xl font-bold text-white leading-tight">
+            <span id="teleDist">0.0</span> <span class="text-xs font-normal text-slate-300">m</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-7 w-[1px] bg-white/10 hidden sm:block"></div>
+
+      <!-- KPM -->
+      <div class="flex items-center gap-2.5">
+        <i class="fa-solid fa-shoe-prints text-emerald-400 text-lg"></i>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">蹬地頻率 KPM</div>
+          <div class="font-tech text-xl font-bold text-white leading-tight">
+            <span id="teleKpm">82</span> <span class="text-xs font-normal text-slate-300">/min</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-7 w-[1px] bg-white/10 hidden sm:block"></div>
+
+      <!-- G-Force -->
+      <div class="flex items-center gap-2.5">
+        <i class="fa-solid fa-wave-square text-purple-400 text-lg"></i>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">顛簸 G 值</div>
+          <div class="font-tech text-xl font-bold text-white leading-tight">
+            <span id="teleG">1.00</span> <span class="text-xs font-normal text-slate-300">G</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="h-7 w-[1px] bg-white/10 hidden sm:block"></div>
+
+      <!-- Happiness -->
+      <div class="flex items-center gap-2.5">
+        <i class="fa-solid fa-heart text-rose-400 text-lg animate-pulse"></i>
+        <div>
+          <div class="text-[10px] uppercase tracking-wider text-slate-400">快樂指數 Mood</div>
+          <div class="font-tech text-xl font-bold text-rose-300 leading-tight">
+            <span id="teleHappy">98</span><span class="text-xs font-normal text-rose-200">%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- BOTTOM-LEFT INTERACTIVE ACTION BUTTONS (按喇叭 & 餵食 & 障礙物) -->
+  <div class="fixed bottom-5 left-5 z-20 flex flex-wrap items-center gap-3">
+    <button id="btnHonk" class="glass-panel hover:bg-amber-500/30 active:scale-95 transition-all px-5 py-3 rounded-2xl flex items-center gap-2.5 font-bold text-sm text-amber-200 border border-amber-400/40 shadow-lg">
+      <i class="fa-solid fa-bullhorn text-amber-400 text-base"></i>
+      <span>按喇叭 (Honk!)</span>
+    </button>
+
+    <button id="btnFeed" class="btn-action glass-panel hover:bg-rose-500/30 active:scale-95 transition-all px-5 py-3 rounded-2xl flex items-center gap-2.5 font-bold text-sm text-rose-200 border border-rose-400/40 shadow-lg">
+      <i class="fa-solid fa-bone text-rose-400 text-base"></i>
+      <span>餵食骨頭 (Feed Treat!)</span>
+    </button>
+
+    <button id="btnSpawnObstacle" class="glass-panel hover:bg-sky-500/30 active:scale-95 transition-all px-4 py-3 rounded-2xl flex items-center gap-2 font-semibold text-xs text-sky-200 border border-sky-400/30">
+      <i class="fa-solid fa-triangle-exclamation text-sky-400"></i>
+      <span>前方放香蕉皮/石頭</span>
+    </button>
+  </div>
+
+  <!-- RIGHT SIDE GLASSMORPHISM CUSTOMIZER & PHYSICS PANEL -->
+  <aside id="controlPanel" class="fixed top-24 right-4 bottom-5 w-80 md:w-96 z-20 glass-panel rounded-3xl flex flex-col overflow-hidden transition-transform duration-300">
+    <!-- Panel Header -->
+    <div class="px-5 py-3.5 border-b border-white/10 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i class="fa-solid fa-sliders text-amber-400"></i>
+        <h2 class="font-bold text-sm tracking-wide text-white">物理模擬與外觀自訂器</h2>
+      </div>
+      <button id="btnTogglePanel" class="text-xs text-slate-300 hover:text-white px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition">
+        <i class="fa-solid fa-chevron-right" id="toggleIcon"></i>
+      </button>
+    </div>
+
+    <!-- Scrollable Controls Content -->
+    <div class="p-5 overflow-y-auto custom-scroll flex-1 space-y-5 text-xs">
+
+      <!-- SECTION 1: 物理與環境數值 -->
+      <div class="space-y-3.5">
+        <div class="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-atom"></i> 物理與環境數值
+        </div>
+
+        <!-- Speed Slider -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-200 font-medium">巡航速度 (Speed)</span>
+            <span id="valSpeed" class="font-tech font-bold text-amber-300">48 km/h</span>
+          </div>
+          <input id="sliderSpeed" type="range" min="0" max="120" value="48" step="1" />
+        </div>
+
+        <!-- Bumpy Terrain Slider -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-200 font-medium">路面顛簸度 (Bumpy Terrain)</span>
+            <span id="valBump" class="font-tech font-bold text-amber-300">25%</span>
+          </div>
+          <input id="sliderBump" type="range" min="0" max="100" value="25" step="1" />
+        </div>
+
+        <!-- Day / Night Cycle -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <span class="text-slate-200 font-medium">日夜周期 (Day/Night Cycle)</span>
+            <span id="valTime" class="font-tech font-bold text-sky-300">白天 Day</span>
+          </div>
+          <input id="sliderTime" type="range" min="0" max="100" value="15" step="1" />
+          <div class="grid grid-cols-3 gap-2 pt-1">
+            <button data-time="12" class="time-preset glass-pill active py-1.5 rounded-xl font-medium text-center">
+              <i class="fa-solid fa-sun mr-1 text-amber-300"></i>白天
+            </button>
+            <button data-time="52" class="time-preset glass-pill py-1.5 rounded-xl font-medium text-center">
+              <i class="fa-solid fa-cloud-sun mr-1 text-orange-400"></i>黃昏
+            </button>
+            <button data-time="88" class="time-preset glass-pill py-1.5 rounded-xl font-medium text-center">
+              <i class="fa-solid fa-moon mr-1 text-indigo-300"></i>夜晚
+            </button>
+          </div>
+        </div>
+
+        <!-- Gravity / Physics Mode -->
+        <div class="space-y-1.5">
+          <span class="text-slate-200 font-medium block">重力 / 物理模式 (Physics Mode)</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button data-gravity="normal" class="grav-btn glass-pill active py-2 rounded-xl font-medium text-center">
+              <i class="fa-solid fa-earth-asia mr-1"></i>普通
+            </button>
+            <button data-gravity="moon" class="grav-btn glass-pill py-2 rounded-xl font-medium text-center">
+              <i class="fa-solid fa-user-astronaut mr-1"></i>月球低重力
+            </button>
+            <button data-gravity="turbo" class="grav-btn glass-pill py-2 rounded-xl font-medium text-center">
+              <i class="fa-solid fa-bolt mr-1"></i>極限加速
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-white/10" />
+
+      <!-- SECTION 2: 外觀自訂與配件 -->
+      <div class="space-y-3.5">
+        <div class="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+          <i class="fa-solid fa-palette"></i> 外觀自訂與配件
+        </div>
+
+        <!-- Helmet Color -->
+        <div class="space-y-1.5">
+          <span class="text-slate-200 font-medium block">頭盔顏色 (Helmet)</span>
+          <div class="grid grid-cols-4 gap-2">
+            <button data-helmet="red" class="helmet-btn glass-pill active py-1.5 rounded-xl font-medium text-center">🔴 烈焰紅</button>
+            <button data-helmet="blue" class="helmet-btn glass-pill py-1.5 rounded-xl font-medium text-center">🔵 鈷藍</button>
+            <button data-helmet="gold" class="helmet-btn glass-pill py-1.5 rounded-xl font-medium text-center">🟡 黃金</button>
+            <button data-helmet="cyber" class="helmet-btn glass-pill py-1.5 rounded-xl font-medium text-center">🟣 霓虹</button>
+          </div>
+        </div>
+
+        <!-- Scooter Style -->
+        <div class="space-y-1.5">
+          <span class="text-slate-200 font-medium block">車身風格 (Scooter Style)</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button data-scooter="classic" class="scooter-btn glass-pill active py-2 rounded-xl font-medium text-center">經典運動</button>
+            <button data-scooter="cyberpunk" class="scooter-btn glass-pill py-2 rounded-xl font-medium text-center">Cyberpunk</button>
+            <button data-scooter="wood" class="scooter-btn glass-pill py-2 rounded-xl font-medium text-center">復古木質</button>
+          </div>
+        </div>
+
+        <!-- Shiba Head/Eye Accessory -->
+        <div class="space-y-1.5">
+          <span class="text-slate-200 font-medium block">柴犬配件 (Shiba Gear)</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button data-acc="goggles" class="acc-btn glass-pill active py-2 rounded-xl font-medium text-center">飛行護目鏡</button>
+            <button data-acc="sunglasses" class="acc-btn glass-pill py-2 rounded-xl font-medium text-center">墨鏡 + 竹蜻蜓</button>
+            <button data-acc="propeller" class="acc-btn glass-pill py-2 rounded-xl font-medium text-center">竹蜻蜓風扇</button>
+          </div>
+        </div>
+
+        <!-- Scarf Color -->
+        <div class="space-y-1.5">
+          <span class="text-slate-200 font-medium block">飄逸圍巾顏色 (Scarf Color)</span>
+          <div class="flex items-center gap-2.5 pt-0.5">
+            <button data-scarf="#ef4444" class="scarf-btn w-7 h-7 rounded-full bg-red-500 ring-2 ring-white scale-110 transition"></button>
+            <button data-scarf="#f97316" class="scarf-btn w-7 h-7 rounded-full bg-orange-500 opacity-75 hover:opacity-100 transition"></button>
+            <button data-scarf="#10b981" class="scarf-btn w-7 h-7 rounded-full bg-emerald-500 opacity-75 hover:opacity-100 transition"></button>
+            <button data-scarf="#06b6d4" class="scarf-btn w-7 h-7 rounded-full bg-cyan-500 opacity-75 hover:opacity-100 transition"></button>
+            <button data-scarf="#a855f7" class="scarf-btn w-7 h-7 rounded-full bg-purple-500 opacity-75 hover:opacity-100 transition"></button>
+          </div>
+        </div>
+
+        <!-- Weather / Environment Particles -->
+        <div class="space-y-1.5">
+          <span class="text-slate-200 font-medium block">環境粒子特效 (Weather & Particles)</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button data-weather="sakura" class="weather-btn glass-pill active py-2 rounded-xl font-medium text-center">🌸 櫻花瓣</button>
+            <button data-weather="leaves" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">🍁 秋葉</button>
+            <button data-weather="fireflies" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">✨ 螢火蟲</button>
+            <button data-weather="rain" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">🌧️ 雨滴</button>
+            <button data-weather="snow" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">❄️ 雪花</button>
+            <button data-weather="clear" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">☀️ 晴朗無粒子</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Floating Restore Panel Button when collapsed -->
+  <button id="btnShowPanel" class="fixed top-24 right-4 z-10 glass-panel px-4 py-2.5 rounded-2xl text-xs font-bold text-amber-300 hidden items-center gap-2 hover:bg-white/10 transition">
+    <i class="fa-solid fa-sliders"></i> 展開控制面板
+  </button>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('simCanvas');
+      const ctx = canvas.getContext('2d');
+
+      let W = window.innerWidth;
+      let H = window.innerHeight;
+
+      function resize() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = window.innerWidth;
+        H = window.innerHeight;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      // ==========================================
+      // WEB AUDIO SYNTHESIZER (No external files)
+      // ==========================================
+      let audioCtx = null;
+      function initAudio() {
+        if (!audioCtx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) audioCtx = new AudioContext();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      }
+
+      function playHonkSound() {
+        initAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+
+        // Crisp Bicycle Bell Ring + Cute Bark
+        [1320, 1760].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+          gain.gain.setValueAtTime(0.18, now + idx * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.45);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + idx * 0.06);
+          osc.stop(now + idx * 0.06 + 0.46);
+        });
+
+        // Playful "Woof!" synth
+        const barkOsc = audioCtx.createOscillator();
+        const barkGain = audioCtx.createGain();
+        barkOsc.type = 'triangle';
+        barkOsc.frequency.setValueAtTime(320, now + 0.12);
+        barkOsc.frequency.exponentialRampToValueAtTime(520, now + 0.19);
+        barkOsc.frequency.exponentialRampToValueAtTime(190, now + 0.32);
+        barkGain.gain.setValueAtTime(0.22, now + 0.12);
+        barkGain.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+        barkOsc.connect(barkGain);
+        barkGain.connect(audioCtx.destination);
+        barkOsc.start(now + 0.12);
+        barkOsc.stop(now + 0.35);
+      }
+
+      function playBounceSound() {
+        initAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(560, now + 0.18);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.24);
+      }
+
+      function playTreatSound() {
+        initAudio();
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.055);
+          gain.gain.setValueAtTime(0.15, now + i * 0.055);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.25);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now + i * 0.055);
+          osc.stop(now + i * 0.055 + 0.26);
+        });
+      }
+
+      // ==========================================
+      // SIMULATION STATE & CONFIGURATION
+      // ==========================================
+      const state = {
+        targetSpeed: 48,        // km/h (0 ~ 120)
+        currentSpeed: 48,       // actual smoothed km/h
+        boostTimer: 0,          // > 0 when fed a treat
+        bumpiness: 0.25,        // 0 ~ 1
+        timeOfDay: 0.15,        // 0.0 = Day, 0.5 = Sunset, 1.0 = Night
+        gravityMode: 'normal',  // 'normal' | 'moon' | 'turbo'
+
+        helmetColor: 'red',     // 'red' | 'blue' | 'gold' | 'cyber'
+        scooterStyle: 'classic',// 'classic' | 'cyberpunk' | 'wood'
+        accessory: 'goggles',   // 'goggles' | 'sunglasses' | 'propeller'
+        scarfColor: '#ef4444',
+        weather: 'sakura',      // 'sakura' | 'leaves' | 'fireflies' | 'rain' | 'snow' | 'clear'
+
+        // World & Physics Coordinates
+        worldX: 0,
+        distanceMeters: 0,
+        kickPhase: 0,
+        wheelAngle: 0,
+        propellerAngle: 0,
+        pinwheelAngle: 0,
+
+        // Spring-Damper Vehicle & Rider Physics
+        scooterY: 0,            // vertical offset from ground
+        scooterVY: 0,
+        scooterPitch: 0,        // tilt angle in radians
+        scooterVPitch: 0,
+        flipAngle: 0,           // 360 stunt rotation when hitting big obstacle
+        flipV: 0,
+        suspensionCompression: 0,
+
+        // Shiba expressive state
+        surprisedTimer: 0,
+        happyTimer: 0,
+        happiness: 98,
+        gForce: 1.0,
+        bellVibration: 0,
+
+        // Scarf multi-node wave points
+        scarfNodes: Array.from({ length: 8 }, () => ({ x: 0, y: 0, vy: 0 }))
+      };
+
+      // ==========================================
+      // PROCEDURAL PARALLAX ASSETS INITIALIZATION
+      // ==========================================
+      const stars = Array.from({ length: 90 }, () => ({
+        x: Math.random() * 2000,
+        y: Math.random() * 450,
+        r: Math.random() * 1.8 + 0.5,
+        twinkle: Math.random() * Math.PI * 2
+      }));
+
+      const clouds = Array.from({ length: 8 }, (_, i) => ({
+        x: i * 320 + Math.random() * 120,
+        y: 65 + Math.random() * 140,
+        scale: 0.65 + Math.random() * 0.7,
+        speedFactor: 0.06 + Math.random() * 0.06
+      }));
+
+      const buildings = Array.from({ length: 28 }, (_, i) => {
+        const w = 55 + Math.random() * 65;
+        const h = 90 + Math.random() * 190;
+        const windows = [];
+        const cols = Math.floor(w / 14);
+        const rows = Math.floor(h / 20);
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            if (Math.random() > 0.35) {
+              windows.push({ c, r, lit: Math.random() > 0.25 });
+            }
+          }
+        }
+        return { x: i * 95, w, h, windows };
+      });
+
+      const trees = Array.from({ length: 18 }, (_, i) => ({
+        x: i * 180 + Math.random() * 50,
+        scale: 0.75 + Math.random() * 0.5,
+        type: i % 2 === 0 ? 'sakura' : 'round'
+      }));
+
+      // Particle Arrays
+      const dustParticles = [];
+      const windStreaks = [];
+      const weatherParticles = [];
+      const floatingBubbles = [];
+      const shockwaves = [];
+      const obstacles = [];
+      const treats = [];
+      const heartParticles = [];
+
+      // Pre-populate weather particles
+      for (let i = 0; i < 55; i++) {
+        weatherParticles.push({
+          x: Math.random() * 2000,
+          y: Math.random() * 1000,
+          vx: -1 - Math.random() * 2,
+          vy: 1 + Math.random() * 2,
+          size: 5 + Math.random() * 6,
+          angle: Math.random() * Math.PI * 2,
+          vAngle: (Math.random() - 0.5) * 0.08,
+          phase: Math.random() * Math.PI * 2
+        });
+      }
+
+      // ==========================================
+      // COLOR INTERPOLATION HELPERS
+      // ==========================================
+      function hexToRgb(hex) {
+        const num = parseInt(hex.replace('#', ''), 16);
+        return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+      }
+
+      function lerpColor(hex1, hex2, t) {
+        const c1 = hexToRgb(hex1);
+        const c2 = hexToRgb(hex2);
+        const r = Math.round(c1[0] + (c2[0] - c1[0]) * t);
+        const g = Math.round(c1[1] + (c2[1] - c1[1]) * t);
+        const b = Math.round(c1[2] + (c2[2] - c1[2]) * t);
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      function getSkyPalette(time) {
+        // 0.0 = Day, 0.5 = Sunset, 1.0 = Night
+        if (time <= 0.5) {
+          const t = time / 0.5;
+          return {
+            top: lerpColor('#38bdf8', '#4c1d95', t),
+            mid: lerpColor('#7dd3fc', '#ea580c', t),
+            bot: lerpColor('#e0f2fe', '#fde047', t),
+            hillFar: lerpColor('#64748b', '#4c1d95', t),
+            hillMid: lerpColor('#4ade80', '#9a3412', t),
+            hillNear: lerpColor('#16a34a', '#431407', t),
+            nightAlpha: t * 0.35
+          };
+        } else {
+          const t = (time - 0.5) / 0.5;
+          return {
+            top: lerpColor('#4c1d95', '#020617', t),
+            mid: lerpColor('#ea580c', '#0f172a', t),
+            bot: lerpColor('#fde047', '#1e293b', t),
+            hillFar: lerpColor('#4c1d95', '#0f172a', t),
+            hillMid: lerpColor('#9a3412', '#1e293b', t),
+            hillNear: lerpColor('#431407', '#0f172a', t),
+            nightAlpha: 0.35 + t * 0.65
+          };
+        }
+      }
+
+      // ==========================================
+      // TERRAIN HEIGHT FUNCTION
+      // ==========================================
+      function getBaseRoadY() {
+        return H * 0.77;
+      }
+
+      function getTerrainOffset(worldX) {
+        if (state.bumpiness <= 0.001) return 0;
+        const b = state.bumpiness;
+        return (
+          Math.sin(worldX * 0.015) * 14 * b +
+          Math.sin(worldX * 0.042 + 1.3) * 8 * b +
+          Math.cos(worldX * 0.085) * 4.5 * b
+        );
+      }
+
+      function getGroundYAtScreenX(screenX) {
+        const wx = state.worldX + screenX;
+        return getBaseRoadY() + getTerrainOffset(wx);
+      }
+
+      // ==========================================
+      // SPAWNERS (Dust, Obstacles, Treats, Honk)
+      // ==========================================
+      function spawnDust(x, y, count = 6, speedBoost = 1) {
+        for (let i = 0; i < count; i++) {
+          dustParticles.push({
+            x: x + (Math.random() - 0.5) * 14,
+            y: y + (Math.random() - 0.5) * 6,
+            vx: -(2 + Math.random() * 4.5) * speedBoost,
+            vy: -(0.8 + Math.random() * 2.8),
+            r: 4 + Math.random() * 8,
+            alpha: 0.75,
+            color: state.gravityMode === 'turbo' && Math.random() > 0.4
+              ? '#fb923c'
+              : 'rgba(226, 232, 240, 0.85)'
+          });
+        }
+      }
+
+      function triggerHonk() {
+        playHonkSound();
+        const shibaX = W * 0.36;
+        const shibaY = getGroundYAtScreenX(shibaX) + state.scooterY - 95;
+        state.bellVibration = 1.0;
+        state.happiness = Math.min(100, state.happiness + 2);
+
+        shockwaves.push({
+          x: shibaX + 52,
+          y: shibaY + 18,
+          r: 8,
+          maxR: 130,
+          alpha: 1.0
+        });
+
+        const phrases = ['Woof! 汪!', '汪汪! 🐾', 'BEEP! 讓路~', '衝呀! 💨'];
+        floatingBubbles.push({
+          x: shibaX + 20,
+          y: shibaY - 45,
+          text: phrases[Math.floor(Math.random() * phrases.length)],
+          vy: -1.2,
+          alpha: 1.0,
+          life: 75
+        });
+      }
+
+      function triggerFeedTreat() {
+        initAudio();
+        const startX = W * 0.78;
+        const startY = H * 0.32;
+        treats.push({
+          x: startX,
+          y: startY,
+          vx: -7.5,
+          vy: -4.2,
+          angle: 0,
+          vAngle: 0.14
+        });
+      }
+
+      function spawnObstacleAt(screenX, customY = null) {
+        const types = ['banana', 'rock', 'pad'];
+        const type = types[Math.floor(Math.random() * types.length)];
+        obstacles.push({
+          worldX: state.worldX + screenX,
+          type,
+          hit: false
+        });
+
+        if (customY !== null) {
+          shockwaves.push({
+            x: screenX,
+            y: customY,
+            r: 4,
+            maxR: 45,
+            alpha: 0.8
+          });
+        }
+      }
+
+      // ==========================================
+      // PHYSICS UPDATE LOOP
+      // ==========================================
+      function updatePhysics(dt) {
+        // Boost handling
+        if (state.boostTimer > 0) {
+          state.boostTimer -= dt;
+        }
+
+        const modeMultiplier = state.gravityMode === 'turbo' ? 1.45 : 1.0;
+        const boostBonus = state.boostTimer > 0 ? 35 : 0;
+        const desiredSpeed = (state.targetSpeed + boostBonus) * modeMultiplier;
+
+        state.currentSpeed += (desiredSpeed - state.currentSpeed) * 0.08;
+
+        // Convert km/h to pixels/frame (at 60fps)
+        const pxPerFrame = state.currentSpeed * 0.22;
+        state.worldX += pxPerFrame;
+        state.distanceMeters += (state.currentSpeed / 3.6) * dt;
+
+        // Wheel & Pinwheel rotation
+        state.wheelAngle += pxPerFrame * 0.045;
+        state.pinwheelAngle += (0.04 + pxPerFrame * 0.025);
+        state.propellerAngle += (0.18 + pxPerFrame * 0.035);
+
+        // Kick Cycle (魔性蹬地動畫)
+        const prevKickSin = Math.sin(state.kickPhase);
+        const kickSpeed = state.currentSpeed > 0.5
+          ? 0.065 + (state.currentSpeed / 120) * 0.22
+          : 0;
+        state.kickPhase += kickSpeed;
+        const currKickSin = Math.sin(state.kickPhase);
+
+        const riderScreenX = W * 0.36;
+        const groundY = getGroundYAtScreenX(riderScreenX);
+        const groundAheadY = getGroundYAtScreenX(riderScreenX + 28);
+        const terrainSlope = Math.atan2(groundAheadY - groundY, 28);
+
+        // Detect moment of foot push-off on ground
+        if (prevKickSin < 0.7 && currKickSin >= 0.7 && state.scooterY > -12 && state.currentSpeed > 2) {
+          spawnDust(riderScreenX - 24, groundY, state.gravityMode === 'turbo' ? 10 : 5, 1.2);
+          // Slight upward kick impulse
+          const kickImpulse = state.gravityMode === 'moon' ? -3.4 : -1.35;
+          state.scooterVY += kickImpulse;
+          state.scooterVPitch -= 0.012;
+        }
+
+        // Gravity & Spring Suspension Physics
+        const gravity = state.gravityMode === 'moon' ? 0.19 : 0.62;
+        const prevVY = state.scooterVY;
+
+        state.scooterVY += gravity;
+        state.scooterY += state.scooterVY;
+
+        // Ground collision & terrain following
+        if (state.scooterY >= 0) {
+          if (state.scooterVY > 3.5) {
+            spawnDust(riderScreenX, groundY, 8, 1.0);
+            state.suspensionCompression = Math.min(12, state.scooterVY * 1.4);
+          }
+          state.scooterY = 0;
+
+          // Bumpy road upward impulse proportional to terrain slope change & speed
+          const terrainBumpImpulse = -Math.abs(terrainSlope) * pxPerFrame * (state.gravityMode === 'moon' ? 1.45 : 0.65);
+          state.scooterVY = terrainBumpImpulse;
+        } else {
+          // In air
+          state.suspensionCompression *= 0.85;
+        }
+
+        state.suspensionCompression *= 0.88;
+
+        // Pitch spring physics
+        const targetPitch = state.scooterY < -5
+          ? Math.max(-0.35, Math.min(0.35, state.scooterVY * 0.025))
+          : terrainSlope;
+        const pitchDiff = targetPitch - state.scooterPitch;
+        state.scooterVPitch += pitchDiff * 0.14;
+        state.scooterVPitch *= 0.78;
+        state.scooterPitch += state.scooterVPitch;
+
+        // 360 Flip stunt rotation
+        if (state.flipV !== 0 || state.flipAngle !== 0) {
+          state.flipAngle += state.flipV;
+          if (state.flipAngle >= Math.PI * 2) {
+            state.flipAngle = 0;
+            state.flipV = 0;
+          } else if (state.scooterY >= 0 && state.flipAngle > Math.PI * 1.3) {
+            state.flipAngle = 0;
+            state.flipV = 0;
+          }
+        }
+
+        // Calculate G-Force for Telemetry
+        const accelG = Math.abs(state.scooterVY - prevVY) / 0.62;
+        state.gForce = state.gForce * 0.85 + (1.0 + accelG) * 0.15;
+
+        // Bell vibration decay
+        if (state.bellVibration > 0) state.bellVibration *= 0.88;
+        if (state.surprisedTimer > 0) state.surprisedTimer -= dt;
+        if (state.happyTimer > 0) state.happyTimer -= dt;
+
+        // Update Scarf Physics Wave
+        state.scarfNodes.forEach((node, idx) => {
+          const wave = Math.sin( performance.now() * 0.012 - idx * 0.7 ) * (3 + state.currentSpeed * 0.08);
+          const targetY = idx * 1.5 + wave - state.scooterVY * idx * 0.9;
+          node.vy += (targetY - node.y) * 0.25;
+          node.vy *= 0.72;
+          node.y += node.vy;
+        });
+
+        // Update Obstacles & Check Collision
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          const obsScreenX = obs.worldX - state.worldX;
+          if (!obs.hit && Math.abs(obsScreenX - riderScreenX) < 38 && state.scooterY > -28) {
+            obs.hit = true;
+            playBounceSound();
+            state.surprisedTimer = 1.1;
+            const jumpPower = state.gravityMode === 'moon' ? -13.5 : -10.5;
+            state.scooterVY = obs.type === 'pad' ? jumpPower * 1.25 : jumpPower;
+            state.flipV = 0.22; // Trigger 360° stunt flip!
+            spawnDust(riderScreenX, groundY, 14, 1.5);
+
+            const hitTexts = {
+              banana: '🍌 滑倒騰空 WHOA!',
+              rock: '🪨 彈飛 BOING!',
+              pad: '🚀 超級彈跳 SUPER JUMP!'
+            };
+            floatingBubbles.push({
+              x: riderScreenX,
+              y: groundY - 120,
+              text: hitTexts[obs.type],
+              vy: -1.5,
+              alpha: 1.0,
+              life: 80
+            });
+          }
+          if (obsScreenX < -120) {
+            obstacles.splice(i, 1);
+          }
+        }
+
+        // Update Treats & Check Catch
+        const headX = riderScreenX + 18;
+        const headY = groundY + state.scooterY - 82;
+        for (let i = treats.length - 1; i >= 0; i--) {
+          const t = treats[i];
+          // Homing slightly toward Shiba's mouth for satisfying catch
+          const dx = headX - t.x;
+          const dy = headY - t.y;
+          t.vx += dx * 0.004;
+          t.vy += 0.22;
+          t.x += t.vx;
+          t.y += t.vy;
+          t.angle += t.vAngle;
+
+          if (Math.hypot(t.x - headX, t.y - headY) < 42) {
+            treats.splice(i, 1);
+            playTreatSound();
+            state.boostTimer = 3.5;
+            state.happyTimer = 2.5;
+            state.happiness = 100;
+            floatingBubbles.push({
+              x: headX,
+              y: headY - 40,
+              text: '🦴 美味加速 NITRO +35 km/h!',
+              vy: -1.4,
+              alpha: 1.0,
+              life: 85
+            });
+            for (let h = 0; h < 10; h++) {
+              heartParticles.push({
+                x: headX + (Math.random() - 0.5) * 30,
+                y: headY + (Math.random() - 0.5) * 20,
+                vx: (Math.random() - 0.5) * 4,
+                vy: -2 - Math.random() * 3,
+                scale: 0.6 + Math.random() * 0.7,
+                alpha: 1.0
+              });
+            }
+          } else if (t.y > H + 50 || t.x < -50) {
+            treats.splice(i, 1);
+          }
+        }
+
+        // Spawn Wind Streaks at high speed
+        if (state.currentSpeed > 35 && Math.random() < (state.currentSpeed / 140)) {
+          windStreaks.push({
+            x: W + 50,
+            y: Math.random() * (H * 0.82),
+            len: 45 + Math.random() * 95 + state.currentSpeed * 0.8,
+            speed: 14 + state.currentSpeed * 0.25,
+            alpha: 0.18 + Math.random() * 0.25
+          });
+        }
+
+        // Update Dust Particles
+        for (let i = dustParticles.length - 1; i >= 0; i--) {
+          const p = dustParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.r *= 1.03;
+          p.alpha -= 0.024;
+          if (p.alpha <= 0) dustParticles.splice(i, 1);
+        }
+
+        // Update Wind Streaks
+        for (let i = windStreaks.length - 1; i >= 0; i--) {
+          const w = windStreaks[i];
+          w.x -= w.speed;
+          if (w.x + w.len < 0) windStreaks.splice(i, 1);
+        }
+
+        // Update Heart Particles
+        for (let i = heartParticles.length - 1; i >= 0; i--) {
+          const hp = heartParticles[i];
+          hp.x += hp.vx;
+          hp.y += hp.vy;
+          hp.alpha -= 0.018;
+          if (hp.alpha <= 0) heartParticles.splice(i, 1);
+        }
+
+        // Update Shockwaves
+        for (let i = shockwaves.length - 1; i >= 0; i--) {
+          const sw = shockwaves[i];
+          sw.r += (sw.maxR - sw.r) * 0.14;
+          sw.alpha -= 0.032;
+          if (sw.alpha <= 0) shockwaves.splice(i, 1);
+        }
+
+        // Update Floating Bubbles
+        for (let i = floatingBubbles.length - 1; i >= 0; i--) {
+          const fb = floatingBubbles[i];
+          fb.y += fb.vy;
+          fb.life--;
+          if (fb.life < 20) fb.alpha = fb.life / 20;
+          if (fb.life <= 0) floatingBubbles.splice(i, 1);
+        }
+
+        // Update Weather Particles
+        weatherParticles.forEach(wp => {
+          wp.phase += 0.04;
+          if (state.weather === 'rain') {
+            wp.x -= (4 + pxPerFrame * 0.6);
+            wp.y += 15;
+          } else if (state.weather === 'snow') {
+            wp.x -= (1.2 + pxPerFrame * 0.35) + Math.sin(wp.phase) * 0.8;
+            wp.y += 2.2;
+          } else if (state.weather === 'fireflies') {
+            wp.x -= pxPerFrame * 0.25 + Math.cos(wp.phase * 0.7) * 0.9;
+            wp.y += Math.sin(wp.phase) * 0.9;
+          } else {
+            // Sakura or Leaves
+            wp.x -= (1.8 + pxPerFrame * 0.45) + Math.sin(wp.phase) * 1.1;
+            wp.y += 1.6 + Math.cos(wp.phase * 0.8) * 0.6;
+            wp.angle += wp.vAngle;
+          }
+
+          if (wp.x < -30) wp.x = W + 30;
+          if (wp.x > W + 40) wp.x = -20;
+          if (wp.y > H + 30) {
+            wp.y = -20;
+            wp.x = Math.random() * W;
+          }
+          if (wp.y < -30) wp.y = H + 20;
+        });
+      }
+
+      // ==========================================
+      // RENDERING LAYER 1: SKY & PARALLAX BACKGROUND
+      // ==========================================
+      function drawBackground() {
+        const pal = getSkyPalette(state.timeOfDay);
+
+        // Sky Linear Gradient
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.78);
+        skyGrad.addColorStop(0, pal.top);
+        skyGrad.addColorStop(0.55, pal.mid);
+        skyGrad.addColorStop(1, pal.bot);
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, W, H);
+
+        // Stars at dusk/night
+        if (pal.nightAlpha > 0.15) {
+          ctx.save();
+          stars.forEach(s => {
+            const sx = ((s.x - state.worldX * 0.02) % W + W) % W;
+            const flicker = 0.55 + 0.45 * Math.sin(performance.now() * 0.003 + s.twinkle);
+            ctx.fillStyle = `rgba(255, 255, 255, ${pal.nightAlpha * flicker})`;
+            ctx.beginPath();
+            ctx.arc(sx, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.restore();
+        }
+
+        // Sun / Moon Celestial Body
+        const celestialX = W * 0.75;
+        const celestialY = H * 0.22 + Math.sin(state.timeOfDay * Math.PI) * 40;
+        ctx.save();
+        if (state.timeOfDay < 0.68) {
+          // Glowing Sun
+          const sunGlow = ctx.createRadialGradient(celestialX, celestialY, 10, celestialX, celestialY, 110);
+          sunGlow.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
+          sunGlow.addColorStop(0.4, 'rgba(251, 146, 60, 0.45)');
+          sunGlow.addColorStop(1, 'rgba(251, 146, 60, 0)');
+          ctx.fillStyle = sunGlow;
+          ctx.beginPath();
+          ctx.arc(celestialX, celestialY, 110, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#fef08a';
+          ctx.beginPath();
+          ctx.arc(celestialX, celestialY, 34, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Crescent Moon
+          const moonGlow = ctx.createRadialGradient(celestialX, celestialY, 10, celestialX, celestialY, 85);
+          moonGlow.addColorStop(0, 'rgba(224, 242, 254, 0.6)');
+          moonGlow.addColorStop(1, 'rgba(224, 242, 254, 0)');
+          ctx.fillStyle = moonGlow;
+          ctx.beginPath();
+          ctx.arc(celestialX, celestialY, 85, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#f8fafc';
+          ctx.beginPath();
+          ctx.arc(celestialX, celestialY, 28, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = pal.top;
+          ctx.beginPath();
+          ctx.arc(celestialX - 10, celestialY - 6, 24, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Parallax Clouds
+        ctx.save();
+        clouds.forEach(c => {
+          const cx = ((c.x - state.worldX * c.speedFactor) % (W + 350) + (W + 350)) % (W + 350) - 175;
+          ctx.save();
+          ctx.translate(cx, c.y);
+          ctx.scale(c.scale, c.scale);
+          ctx.fillStyle = state.timeOfDay > 0.65
+            ? 'rgba(148, 163, 184, 0.18)'
+            : state.timeOfDay > 0.35
+              ? 'rgba(253, 186, 116, 0.55)'
+              : 'rgba(255, 255, 255, 0.78)';
+          ctx.beginPath();
+          ctx.arc(0, 0, 28, 0, Math.PI * 2);
+          ctx.arc(26, -8, 34, 0, Math.PI * 2);
+          ctx.arc(58, -2, 26, 0, Math.PI * 2);
+          ctx.arc(28, 10, 28, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+        ctx.restore();
+
+        const baseRoadY = getBaseRoadY();
+
+        // Far City Skyline (遠景城市天際線)
+        const totalCityWidth = buildings.length * 95;
+        ctx.save();
+        buildings.forEach(b => {
+          const bx = ((b.x - state.worldX * 0.12) % totalCityWidth + totalCityWidth) % totalCityWidth - 100;
+          if (bx > W + 100) return;
+          const by = baseRoadY - 65 - b.h;
+          ctx.fillStyle = pal.hillFar;
+          ctx.fillRect(bx, by, b.w, b.h + 70);
+
+          // Lit Windows at Dusk/Night
+          if (state.timeOfDay > 0.38) {
+            ctx.fillStyle = state.scooterStyle === 'cyberpunk' ? '#22d3ee' : '#fde047';
+            b.windows.forEach(win => {
+              if (win.lit) {
+                ctx.fillRect(bx + 8 + win.c * 13, by + 12 + win.r * 18, 6, 10);
+              }
+            });
+          }
+        });
+        ctx.restore();
+
+        // Midground Rolling Hills (中景山丘)
+        ctx.save();
+        ctx.fillStyle = pal.hillMid;
+        ctx.beginPath();
+        ctx.moveTo(0, baseRoadY);
+        for (let x = 0; x <= W + 40; x += 40) {
+          const wx = x + state.worldX * 0.25;
+          const hy = baseRoadY - 48 - Math.sin(wx * 0.0035) * 38 - Math.cos(wx * 0.008) * 18;
+          ctx.lineTo(x, hy);
+        }
+        ctx.lineTo(W, baseRoadY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Nearer Lush Park Hills
+        ctx.fillStyle = pal.hillNear;
+        ctx.beginPath();
+        ctx.moveTo(0, baseRoadY);
+        for (let x = 0; x <= W + 30; x += 30) {
+          const wx = x + state.worldX * 0.45;
+          const hy = baseRoadY - 20 - Math.sin(wx * 0.006 + 1) * 22;
+          ctx.lineTo(x, hy);
+        }
+        ctx.lineTo(W, baseRoadY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Midground Park Trees & Street Lamps (樹木與夜晚發光路燈)
+        const totalTreeSpan = trees.length * 180;
+        trees.forEach((tr, idx) => {
+          const tx = ((tr.x - state.worldX * 0.55) % totalTreeSpan + totalTreeSpan) % totalTreeSpan - 120;
+          if (tx < -120 || tx > W + 120) return;
+          const ty = baseRoadY - 12;
+
+          ctx.save();
+          ctx.translate(tx, ty);
+          ctx.scale(tr.scale, tr.scale);
+
+          // Tree Trunk
+          ctx.fillStyle = '#451a03';
+          ctx.fillRect(-6, -55, 12, 55);
+
+          // Foliage
+          if (state.weather === 'sakura' && tr.type === 'sakura') {
+            ctx.fillStyle = state.timeOfDay > 0.65 ? '#831843' : '#f472b6';
+          } else if (state.weather === 'leaves') {
+            ctx.fillStyle = state.timeOfDay > 0.65 ? '#7c2d12' : '#ea580c';
+          } else {
+            ctx.fillStyle = state.timeOfDay > 0.65 ? '#064e3b' : '#15803d';
+          }
+
+          ctx.beginPath();
+          ctx.arc(0, -75, 34, 0, Math.PI * 2);
+          ctx.arc(-24, -62, 26, 0, Math.PI * 2);
+          ctx.arc(24, -62, 26, 0, Math.PI * 2);
+          ctx.arc(0, -98, 25, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // Street Lamp every 2 trees
+          if (idx % 2 === 0) {
+            const lx = tx + 85;
+            const ly = baseRoadY - 6;
+            ctx.save();
+            // Pole
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(lx, ly);
+            ctx.lineTo(lx, ly - 125);
+            ctx.quadraticCurveTo(lx, ly - 142, lx + 22, ly - 142);
+            ctx.stroke();
+
+            // Lamp Head
+            const isLit = state.timeOfDay > 0.42;
+            ctx.fillStyle = isLit ? '#fef08a' : '#94a3b8';
+            ctx.beginPath();
+            ctx.arc(lx + 24, ly - 140, 7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Night Halo & Light Cone
+            if (isLit) {
+              const halo = ctx.createRadialGradient(lx + 24, ly - 140, 2, lx + 24, ly - 140, 75);
+              halo.addColorStop(0, 'rgba(254, 240, 138, 0.85)');
+              halo.addColorStop(0.4, 'rgba(250, 204, 21, 0.28)');
+              halo.addColorStop(1, 'rgba(250, 204, 21, 0)');
+              ctx.fillStyle = halo;
+              ctx.beginPath();
+              ctx.arc(lx + 24, ly - 140, 75, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Light cone to road
+              const cone = ctx.createLinearGradient(lx + 24, ly - 140, lx + 24, ly + 10);
+              cone.addColorStop(0, 'rgba(254, 240, 138, 0.24)');
+              cone.addColorStop(1, 'rgba(254, 240, 138, 0)');
+              ctx.fillStyle = cone;
+              ctx.beginPath();
+              ctx.moveTo(lx + 18, ly - 138);
+              ctx.lineTo(lx + 30, ly - 138);
+              ctx.lineTo(lx + 85, ly + 15);
+              ctx.lineTo(lx - 35, ly + 15);
+              ctx.closePath();
+              ctx.fill();
+            }
+            ctx.restore();
+          }
+        });
+      }
+
+      // ==========================================
+      // RENDERING LAYER 2: DYNAMIC ROAD & FOREGROUND
+      // ==========================================
+      function drawForegroundRoad() {
+        // Draw Grass / Shoulder Curb
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(0, H);
+        for (let x = 0; x <= W + 16; x += 16) {
+          ctx.lineTo(x, getGroundYAtScreenX(x) - 10);
+        }
+        ctx.lineTo(W, H);
+        ctx.closePath();
+        ctx.fillStyle = state.timeOfDay > 0.65 ? '#065f46' : '#22c55e';
+        ctx.fill();
+
+        // Main Asphalt Road Surface
+        ctx.beginPath();
+        ctx.moveTo(0, H);
+        for (let x = 0; x <= W + 16; x += 16) {
+          ctx.lineTo(x, getGroundYAtScreenX(x));
+        }
+        ctx.lineTo(W, H);
+        ctx.closePath();
+        const roadGrad = ctx.createLinearGradient(0, getBaseRoadY(), 0, H);
+        roadGrad.addColorStop(0, '#334155');
+        roadGrad.addColorStop(0.25, '#1e293b');
+        roadGrad.addColorStop(1, '#0f172a');
+        ctx.fillStyle = roadGrad;
+        ctx.fill();
+
+        // Top Road Curb Highlight Line
+        ctx.beginPath();
+        for (let x = 0; x <= W + 16; x += 16) {
+          const y = getGroundYAtScreenX(x);
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = state.scooterStyle === 'cyberpunk' ? '#06b6d4' : '#94a3b8';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Dashed Highway Lane Markings
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'round';
+        const dashSpacing = 110;
+        const offset = state.worldX % dashSpacing;
+        for (let x = -offset; x < W + dashSpacing; x += dashSpacing) {
+          const y1 = getGroundYAtScreenX(x) + 34;
+          const y2 = getGroundYAtScreenX(x + 48) + 34;
+          ctx.beginPath();
+          ctx.moveTo(x, y1);
+          ctx.lineTo(x + 48, y2);
+          ctx.stroke();
+        }
+
+        // Distance Road Signs & Roadside Grass Tufts
+        const signInterval = 750;
+        const firstSignWorld = Math.floor(state.worldX / signInterval) * signInterval;
+        for (let wx = firstSignWorld; wx < state.worldX + W + signInterval; wx += signInterval) {
+          const sx = wx - state.worldX;
+          if (sx > -80 && sx < W + 80) {
+            const sy = getGroundYAtScreenX(sx);
+            ctx.save();
+            ctx.translate(sx, sy - 6);
+            // Signpost
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(-3, -68, 6, 68);
+            // Board
+            ctx.fillStyle = '#0284c7';
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(-36, -92, 72, 28, 6);
+            ctx.fill();
+            ctx.stroke();
+            // Text
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px "Chakra Petch", sans-serif';
+            ctx.textAlign = 'center';
+            const kmLabel = `${Math.max(0, Math.round(wx / 50))}m`;
+            ctx.fillText(kmLabel, 0, -74);
+            ctx.restore();
+          }
+        }
+
+        // Draw Placed Obstacles on the Road
+        obstacles.forEach(obs => {
+          const ox = obs.worldX - state.worldX;
+          if (ox < -60 || ox > W + 60) return;
+          const oy = getGroundYAtScreenX(ox) + 8;
+
+          ctx.save();
+          ctx.translate(ox, oy);
+          if (obs.type === 'banana') {
+            // Banana Peel
+            ctx.fillStyle = '#facc15';
+            ctx.strokeStyle = '#ca8a04';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-16, 4);
+            ctx.quadraticCurveTo(-6, -18, 0, -6);
+            ctx.quadraticCurveTo(8, -18, 18, 4);
+            ctx.quadraticCurveTo(0, 0, -16, 4);
+            ctx.fill();
+            ctx.stroke();
+          } else if (obs.type === 'rock') {
+            // Bumpy Rock
+            ctx.fillStyle = '#64748b';
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-18, 6);
+            ctx.lineTo(-12, -12);
+            ctx.lineTo(4, -15);
+            ctx.lineTo(18, -4);
+            ctx.lineTo(20, 6);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            // Jump Pad
+            ctx.fillStyle = '#f43f5e';
+            ctx.beginPath();
+            ctx.roundRect(-22, -6, 44, 12, 4);
+            ctx.fill();
+            ctx.fillStyle = '#fef08a';
+            ctx.fillRect(-14, -6, 28, 4);
+          }
+          ctx.restore();
+        });
+
+        ctx.restore();
+      }
+
+      // ==========================================
+      // RENDERING LAYER 3: SCOOTER & SHIBA INU
+      // ==========================================
+      function drawScooterAndShiba() {
+        const riderX = W * 0.36;
+        const groundY = getGroundYAtScreenX(riderX);
+        const totalY = groundY + state.scooterY;
+
+        ctx.save();
+        // Ground Shadow
+        const shadowScale = Math.max(0.35, 1 + state.scooterY / 160);
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.42)';
+        ctx.beginPath();
+        ctx.ellipse(riderX, groundY + 12, 68 * shadowScale, 11 * shadowScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Translate to Scooter Center & Apply Pitch / Flip
+        ctx.translate(riderX, totalY - 22);
+        ctx.rotate(state.scooterPitch + state.flipAngle);
+
+        // Style Palettes
+        const scooterPalettes = {
+          classic: { deck: '#e11d48', stem: '#e2e8f0', rim: '#f8fafc', glow: null },
+          cyberpunk: { deck: '#06b6d4', stem: '#a855f7', rim: '#22d3ee', glow: '#22d3ee' },
+          wood: { deck: '#b45309', stem: '#d97706', rim: '#fef3c7', glow: null }
+        };
+        const sPal = scooterPalettes[state.scooterStyle] || scooterPalettes.classic;
+
+        // Cyberpunk or Night Underglow Neon
+        if (sPal.glow || state.timeOfDay > 0.5) {
+          const neonColor = sPal.glow || '#38bdf8';
+          ctx.save();
+          ctx.shadowColor = neonColor;
+          ctx.shadowBlur = 22;
+          ctx.strokeStyle = neonColor;
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(-42, 10);
+          ctx.lineTo(42, 10);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Headlight Beam at Dusk/Night
+        if (state.timeOfDay > 0.42) {
+          ctx.save();
+          const beam = ctx.createLinearGradient(48, -58, 290, -10);
+          beam.addColorStop(0, 'rgba(254, 240, 138, 0.55)');
+          beam.addColorStop(1, 'rgba(254, 240, 138, 0)');
+          ctx.fillStyle = beam;
+          ctx.beginPath();
+          ctx.moveTo(48, -62);
+          ctx.lineTo(310, -95);
+          ctx.lineTo(310, 25);
+          ctx.lineTo(48, -52);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Nitro Exhaust Flame in Turbo Mode or Treat Boost
+        if (state.gravityMode === 'turbo' || state.boostTimer > 0) {
+          ctx.save();
+          const flameLen = 35 + Math.random() * 35;
+          const flameGrad = ctx.createLinearGradient(-52, 4, -52 - flameLen, 4);
+          flameGrad.addColorStop(0, '#38bdf8');
+          flameGrad.addColorStop(0.4, '#fbbf24');
+          flameGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+          ctx.fillStyle = flameGrad;
+          ctx.beginPath();
+          ctx.moveTo(-48, -2);
+          ctx.lineTo(-52 - flameLen, 4 + (Math.random() - 0.5) * 8);
+          ctx.lineTo(-48, 10);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Helper to draw spinning wheel
+        function drawWheel(wx, wy) {
+          ctx.save();
+          ctx.translate(wx, wy);
+          // Tire
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(0, 0, 21, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#334155';
+          ctx.stroke();
+
+          // Rim
+          ctx.fillStyle = sPal.rim;
+          ctx.beginPath();
+          ctx.arc(0, 0, 12, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Rotating Spokes
+          ctx.rotate(state.wheelAngle);
+          ctx.strokeStyle = '#475569';
+          ctx.lineWidth = 2.5;
+          for (let i = 0; i < 6; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(Math.cos(i * Math.PI / 3) * 12, Math.sin(i * Math.PI / 3) * 12);
+            ctx.stroke();
+          }
+
+          // Hub cap
+          ctx.fillStyle = sPal.deck;
+          ctx.beginPath();
+          ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        const rearWheelX = -52;
+        const frontWheelX = 56;
+        const wheelY = 12;
+
+        drawWheel(rearWheelX, wheelY);
+        drawWheel(frontWheelX, wheelY);
+
+        // Suspension Compression offset for upper chassis & Shiba
+        const suspOffset = state.suspensionCompression;
+
+        ctx.save();
+        ctx.translate(0, suspOffset);
+
+        // Front Fork & Coil Shock Absorber (前叉與伸縮避震器)
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(frontWheelX, wheelY - suspOffset);
+        ctx.lineTo(44, -22);
+        ctx.stroke();
+
+        // Visible Yellow/Cyan Shock Absorber Spring Coils
+        ctx.strokeStyle = state.scooterStyle === 'cyberpunk' ? '#22d3ee' : '#fbbf24';
+        ctx.lineWidth = 3;
+        const springTopY = -18;
+        const springBotY = wheelY - suspOffset - 4;
+        const coils = 5;
+        ctx.beginPath();
+        for (let c = 0; c <= coils; c++) {
+          const t = c / coils;
+          const sy = springTopY + (springBotY - springTopY) * t;
+          const sx = 50 + (c % 2 === 0 ? -4 : 4);
+          if (c === 0) ctx.moveTo(48, sy);
+          else ctx.lineTo(sx, sy);
+        }
+        ctx.stroke();
+
+        // Scooter Deck (踏板)
+        ctx.fillStyle = sPal.deck;
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-50, -2, 96, 12, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        // Grip tape on deck
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(-38, -3, 66, 3);
+
+        // Rear Fender
+        ctx.fillStyle = sPal.deck;
+        ctx.beginPath();
+        ctx.arc(rearWheelX, wheelY - suspOffset, 25, Math.PI * 1.15, Math.PI * 1.78);
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = sPal.deck;
+        ctx.stroke();
+
+        // Steering Stem (手把立管)
+        ctx.strokeStyle = sPal.stem;
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(42, -2);
+        ctx.lineTo(30, -78);
+        ctx.stroke();
+
+        // Bike Bell (車鈴) with vibration
+        const bellShake = Math.sin(performance.now() * 0.08) * state.bellVibration * 4;
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(24 + bellShake, -74, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Spinning Front Pinwheel (車頭小風車)
+        ctx.save();
+        ctx.translate(41, -72);
+        ctx.rotate(state.pinwheelAngle);
+        const pwColors = ['#f43f5e', '#38bdf8', '#fbbf24', '#4ade80'];
+        for (let p = 0; p < 4; p++) {
+          ctx.rotate(Math.PI / 2);
+          ctx.fillStyle = pwColors[p];
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(8, -4, 11, 4);
+          ctx.lineTo(0, 0);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // ==========================================
+        // DRAW SHIBA INU (柴犬「咚咚」)
+        // ==========================================
+        const kickSin = Math.sin(state.kickPhase);
+        const kickCos = Math.cos(state.kickPhase);
+        const bodyBob = Math.abs(kickSin) * 4.5;
+
+        ctx.save();
+        ctx.translate(-8, -6 - bodyBob);
+
+        // Colors
+        const furMain = '#e58538';
+        const furShade = '#c86a22';
+        const furCream = '#fff7ed';
+
+        // 1. Left Hind Leg (Standing stably on scooter deck)
+        ctx.save();
+        ctx.strokeStyle = furShade;
+        ctx.lineWidth = 13;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-16, -24);
+        ctx.lineTo(-22, -8);
+        ctx.lineTo(-14, 4 + bodyBob);
+        ctx.stroke();
+        // Cream paw tip
+        ctx.fillStyle = furCream;
+        ctx.beginPath();
+        ctx.ellipse(-12, 5 + bodyBob, 7, 4.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 2. Curly Fluffy Tail (Q彈擺動柴犬捲尾)
+        const tailWag = Math.sin(performance.now() * 0.014 + state.kickPhase) * 0.18;
+        ctx.save();
+        ctx.translate(-34, -36);
+        ctx.rotate(tailWag);
+        ctx.fillStyle = furMain;
+        ctx.beginPath();
+        ctx.arc(-8, -10, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = furCream;
+        ctx.beginPath();
+        ctx.arc(-12, -14, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 3. Shiba Torso (身體)
+        ctx.save();
+        ctx.translate(-6, -38);
+        ctx.rotate(0.28); // Leaning forward dynamically
+        const torsoGrad = ctx.createLinearGradient(-22, -25, 22, 25);
+        torsoGrad.addColorStop(0, '#f59e0b');
+        torsoGrad.addColorStop(1, furMain);
+        ctx.fillStyle = torsoGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 22, 31, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cream chest & belly fur (Urajiro)
+        ctx.fillStyle = furCream;
+        ctx.beginPath();
+        ctx.ellipse(11, -2, 11, 24, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 4. Right Hind Leg — THE MAGIC KICKING LEG (魔性蹬地後腿)
+        // Kicking trajectory: reaches forward/down, pushes back along ground, lifts up behind
+        const footX = -18 - kickSin * 34;
+        const footLift = Math.max(0, -kickCos) * 20;
+        const footY = 16 + bodyBob - footLift;
+
+        ctx.save();
+        // Upper thigh
+        ctx.strokeStyle = furMain;
+        ctx.lineWidth = 14;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        const kneeX = (-14 + footX) * 0.5 + 8;
+        const kneeY = (-24 + footY) * 0.5 - 6;
+        ctx.beginPath();
+        ctx.moveTo(-14, -24);
+        ctx.lineTo(kneeX, kneeY);
+        ctx.lineTo(footX, footY);
+        ctx.stroke();
+
+        // White sock & paw pad
+        ctx.fillStyle = furCream;
+        ctx.beginPath();
+        ctx.ellipse(footX + 2, footY, 8, 5, -kickSin * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 5. Flowing Physics Scarf (飄逸圍巾)
+        ctx.save();
+        ctx.translate(8, -56);
+        // Neck wrap
+        ctx.fillStyle = state.scarfColor;
+        ctx.beginPath();
+        ctx.roundRect(-14, -6, 28, 11, 5);
+        ctx.fill();
+
+        // Flowing Scarf Tail using physics nodes
+        ctx.beginPath();
+        ctx.moveTo(-10, 0);
+        state.scarfNodes.forEach((pt, idx) => {
+          ctx.lineTo(-10 - idx * 9, pt.y);
+        });
+        for (let idx = state.scarfNodes.length - 1; idx >= 0; idx--) {
+          ctx.lineTo(-10 - idx * 9, state.scarfNodes[idx].y + 9);
+        }
+        ctx.closePath();
+        ctx.fillStyle = state.scarfColor;
+        ctx.fill();
+        ctx.restore();
+
+        // 6. Front Arm Gripping Handlebar (前爪握住手把)
+        ctx.save();
+        ctx.strokeStyle = furMain;
+        ctx.lineWidth = 12;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(10, -50);
+        ctx.lineTo(24, -62);
+        ctx.lineTo(36, -70 + bodyBob * 0.5);
+        ctx.stroke();
+
+        // Cute white front paw on handlebar grip
+        ctx.fillStyle = furCream;
+        ctx.beginPath();
+        ctx.arc(37, -70 + bodyBob * 0.5, 6.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Handlebar Grip Bar
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.roundRect(26, -75 + bodyBob * 0.5, 16, 7, 3);
+        ctx.fill();
+        ctx.restore();
+
+        // 7. Shiba Head, Ears, Expression & Helmet (頭部、耳朵、頭盔與表情)
+        ctx.save();
+        const headPitch = -state.scooterPitch * 0.35 + Math.sin(state.kickPhase) * 0.04;
+        ctx.translate(14, -76);
+        ctx.rotate(headPitch);
+
+        // Back Ear
+        const earBounce = Math.sin(state.kickPhase * 2) * 0.08;
+        ctx.save();
+        ctx.translate(-4, -18);
+        ctx.rotate(-0.15 + earBounce);
+        ctx.fillStyle = furShade;
+        ctx.beginPath();
+        ctx.moveTo(-7, 4);
+        ctx.lineTo(2, -18);
+        ctx.lineTo(10, 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Main Head Base (3D-shaded Shiba head)
+        const headGrad = ctx.createRadialGradient(-4, -6, 4, 0, 0, 26);
+        headGrad.addColorStop(0, '#fb923c');
+        headGrad.addColorStop(1, furMain);
+        ctx.fillStyle = headGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Shiba Snout & Cream Cheek Markings (臉頰白毛與吻部)
+        ctx.fillStyle = furCream;
+        ctx.beginPath();
+        ctx.ellipse(15, 5, 13, 9.5, 0.08, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(8, 8, 12, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Cute White Eyebrow Dots (柴犬招牌白豆眉)
+        ctx.fillStyle = furCream;
+        ctx.beginPath();
+        ctx.ellipse(11, -10, 3.5, 2.2, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Panting Pink Tongue with Physics Flutter (物理飄動哈氣小舌頭)
+        const tongueWave = Math.sin(performance.now() * 0.025) * 2.5;
+        ctx.fillStyle = '#fb7185';
+        ctx.beginPath();
+        ctx.moveTo(14, 10);
+        ctx.quadraticCurveTo(22, 19 + tongueWave, 15, 22 + tongueWave);
+        ctx.quadraticCurveTo(10, 18, 12, 10);
+        ctx.fill();
+
+        // Black Nose
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.ellipse(26, 1, 4.2, 3.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes (Normal vs Surprised vs Happy)
+        if (state.surprisedTimer > 0) {
+          // Wide Surprised O_O Eye
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(12, -3, 5.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(13, -3, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (state.happyTimer > 0) {
+          // Happy ^ ^ Arch Eye
+          ctx.strokeStyle = '#0f172a';
+          ctx.lineWidth = 2.8;
+          ctx.beginPath();
+          ctx.arc(12, -1, 4.5, Math.PI * 1.1, Math.PI * 1.9);
+          ctx.stroke();
+        } else {
+          // Bright Expressive Shiba Eye
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(12, -3, 3.6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(13.2, -4.2, 1.3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Front Ear
+        ctx.save();
+        ctx.translate(-10, -16);
+        ctx.rotate(-0.25 - earBounce);
+        ctx.fillStyle = furMain;
+        ctx.beginPath();
+        ctx.moveTo(-8, 6);
+        ctx.lineTo(0, -17);
+        ctx.lineTo(9, 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = furCream;
+        ctx.beginPath();
+        ctx.moveTo(-4, 4);
+        ctx.lineTo(0, -11);
+        ctx.lineTo(5, 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Helmet (小頭盔)
+        const helmetColors = {
+          red: { main: '#ef4444', stripe: '#fef08a', glow: null },
+          blue: { main: '#2563eb', stripe: '#38bdf8', glow: null },
+          gold: { main: '#eab308', stripe: '#fef9c3', glow: null },
+          cyber: { main: '#9333ea', stripe: '#22d3ee', glow: '#22d3ee' }
+        };
+        const hPal = helmetColors[state.helmetColor] || helmetColors.red;
+
+        ctx.save();
+        if (hPal.glow) {
+          ctx.shadowColor = hPal.glow;
+          ctx.shadowBlur = 14;
+        }
+        ctx.fillStyle = hPal.main;
+        ctx.beginPath();
+        ctx.arc(-2, -6, 22, Math.PI * 0.95, Math.PI * 2.08);
+        ctx.closePath();
+        ctx.fill();
+
+        // Helmet Racing Stripe
+        ctx.strokeStyle = hPal.stripe;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(-2, -6, 19, Math.PI * 1.15, Math.PI * 1.95);
+        ctx.stroke();
+
+        // Chin strap
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(-6, -4);
+        ctx.quadraticCurveTo(2, 15, 8, 12);
+        ctx.stroke();
+        ctx.restore();
+
+        // Accessories: Goggles / Sunglasses / Bamboo-copter Propeller
+        if (state.accessory === 'goggles') {
+          // Aviator Goggles on Helmet Brow
+          ctx.fillStyle = '#334155';
+          ctx.beginPath();
+          ctx.roundRect(4, -18, 16, 10, 4);
+          ctx.fill();
+          ctx.fillStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.roundRect(6, -16, 12, 6, 2);
+          ctx.fill();
+        } else if (state.accessory === 'sunglasses') {
+          // Cool Deal-With-It Sunglasses over Eyes
+          ctx.fillStyle = '#020617';
+          ctx.fillRect(4, -8, 16, 7);
+          ctx.strokeStyle = '#f8fafc';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(-4, -6);
+          ctx.lineTo(20, -6);
+          ctx.stroke();
+          // Shine on lens
+          ctx.strokeStyle = '#38bdf8';
+          ctx.beginPath();
+          ctx.moveTo(8, -7);
+          ctx.lineTo(12, -2);
+          ctx.stroke();
+        }
+
+        if (state.accessory === 'propeller' || state.accessory === 'sunglasses') {
+          // Spinning Bamboo-copter (小竹蜻蜓風扇) on top of helmet
+          ctx.save();
+          ctx.translate(-2, -28);
+          ctx.fillStyle = '#fbbf24';
+          ctx.fillRect(-2, -9, 4, 9);
+          const bladeWidth = Math.cos(state.propellerAngle) * 22;
+          ctx.strokeStyle = '#fef08a';
+          ctx.lineWidth = 4;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(-bladeWidth, -9);
+          ctx.lineTo(bladeWidth, -9);
+          ctx.stroke();
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(0, -9, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.restore(); // End Head
+        ctx.restore(); // End Shiba
+        ctx.restore(); // End Suspension Offset
+        ctx.restore(); // End Scooter Transform
+      }
+
+      // ==========================================
+      // RENDERING LAYER 4: PARTICLES & FX OVERLAYS
+      // ==========================================
+      function drawParticlesAndFX() {
+        // 1. Dust Particles
+        dustParticles.forEach(p => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // 2. Wind Streaks (高速風阻線)
+        ctx.save();
+        ctx.lineCap = 'round';
+        windStreaks.forEach(w => {
+          const grad = ctx.createLinearGradient(w.x, w.y, w.x + w.len, w.y);
+          grad.addColorStop(0, `rgba(255, 255, 255, ${w.alpha})`);
+          grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(w.x, w.y);
+          ctx.lineTo(w.x + w.len, w.y);
+          ctx.stroke();
+        });
+        ctx.restore();
+
+        // 3. Flying Bone Treats (餵食骨頭)
+        treats.forEach(t => {
+          ctx.save();
+          ctx.translate(t.x, t.y);
+          ctx.rotate(t.angle);
+          ctx.fillStyle = '#fffbeb';
+          ctx.strokeStyle = '#d97706';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(-12, -4, 24, 8, 3);
+          ctx.fill();
+          ctx.stroke();
+          [[-12, -5], [-12, 5], [12, -5], [12, 5]].forEach(([bx, by]) => {
+            ctx.beginPath();
+            ctx.arc(bx, by, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          });
+          ctx.restore();
+        });
+
+        // 4. Floating Hearts
+        heartParticles.forEach(hp => {
+          ctx.save();
+          ctx.translate(hp.x, hp.y);
+          ctx.scale(hp.scale, hp.scale);
+          ctx.globalAlpha = Math.max(0, hp.alpha);
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.moveTo(0, 4);
+          ctx.bezierCurveTo(-10, -6, -14, 4, 0, 14);
+          ctx.bezierCurveTo(14, 4, 10, -6, 0, 4);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        // 5. Honk Acoustic Shockwaves
+        shockwaves.forEach(sw => {
+          ctx.save();
+          ctx.strokeStyle = `rgba(251, 191, 36, ${Math.max(0, sw.alpha)})`;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 6. Comic Speech Bubbles ("Woof!", "BOING!")
+        floatingBubbles.forEach(fb => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, fb.alpha);
+          ctx.font = 'bold 14px "Noto Sans TC", sans-serif';
+          const textW = ctx.measureText(fb.text).width + 24;
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.94)';
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.roundRect(fb.x - textW / 2, fb.y - 18, textW, 32, 12);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#0f172a';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(fb.text, fb.x, fb.y - 2);
+          ctx.restore();
+        });
+
+        // 7. Environmental Weather Particles (櫻花 / 秋葉 / 螢火蟲 / 雨 / 雪)
+        if (state.weather !== 'clear') {
+          weatherParticles.forEach(wp => {
+            ctx.save();
+            ctx.translate(wp.x, wp.y);
+            if (state.weather === 'sakura') {
+              ctx.rotate(wp.angle);
+              ctx.fillStyle = '#fbcfe8';
+              ctx.beginPath();
+              ctx.ellipse(0, 0, wp.size, wp.size * 0.6, 0, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (state.weather === 'leaves') {
+              ctx.rotate(wp.angle);
+              ctx.fillStyle = '#ea580c';
+              ctx.beginPath();
+              ctx.ellipse(0, 0, wp.size * 1.1, wp.size * 0.65, 0, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (state.weather === 'fireflies') {
+              const glow = 0.4 + 0.6 * Math.sin(wp.phase * 1.5);
+              ctx.shadowColor = '#bef264';
+              ctx.shadowBlur = 12;
+              ctx.fillStyle = `rgba(217, 249, 157, ${glow})`;
+              ctx.beginPath();
+              ctx.arc(0, 0, 3.2, 0, Math.PI * 2);
+              ctx.fill();
+            } else if (state.weather === 'rain') {
+              ctx.strokeStyle = 'rgba(186, 230, 253, 0.65)';
+              ctx.lineWidth = 1.6;
+              ctx.beginPath();
+              ctx.moveTo(0, 0);
+              ctx.lineTo(-4, 14);
+              ctx.stroke();
+            } else if (state.weather === 'snow') {
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+              ctx.beginPath();
+              ctx.arc(0, 0, wp.size * 0.45, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            ctx.restore();
+          });
+        }
+      }
+
+      // ==========================================
+      // TELEMETRY DOM UPDATER
+      // ==========================================
+      const elSpeed = document.getElementById('teleSpeed');
+      const elDist = document.getElementById('teleDist');
+      const elKpm = document.getElementById('teleKpm');
+      const elG = document.getElementById('teleG');
+      const elHappy = document.getElementById('teleHappy');
+
+      let uiFrameCounter = 0;
+      function updateTelemetryUI() {
+        uiFrameCounter++;
+        if (uiFrameCounter % 4 !== 0) return;
+
+        elSpeed.textContent = Math.round(state.currentSpeed);
+        elDist.textContent = state.distanceMeters.toFixed(1);
+        const kpm = state.currentSpeed > 0.5
+          ? Math.round(35 + state.currentSpeed * 1.35)
+          : 0;
+        elKpm.textContent = kpm;
+        elG.textContent = state.gForce.toFixed(2);
+        elHappy.textContent = Math.round(state.happiness);
+      }
+
+      // ==========================================
+      // MAIN 60FPS ANIMATION LOOP
+      // ==========================================
+      let lastTime = performance.now();
+      function animate(now) {
+        const dt = Math.min((now - lastTime) / 1000, 0.05);
+        lastTime = now;
+
+        updatePhysics(dt);
+
+        ctx.clearRect(0, 0, W, H);
+        drawBackground();
+        drawForegroundRoad();
+        drawScooterAndShiba();
+        drawParticlesAndFX();
+
+        updateTelemetryUI();
+        requestAnimationFrame(animate);
+      }
+      requestAnimationFrame(animate);
+
+      // ==========================================
+      // UI CONTROLS & INTERACTIVE EVENT BINDINGS
+      // ==========================================
+      const sliderSpeed = document.getElementById('sliderSpeed');
+      const valSpeed = document.getElementById('valSpeed');
+      sliderSpeed.addEventListener('input', e => {
+        state.targetSpeed = parseFloat(e.target.value);
+        valSpeed.textContent = `${state.targetSpeed} km/h`;
+      });
+
+      const sliderBump = document.getElementById('sliderBump');
+      const valBump = document.getElementById('valBump');
+      sliderBump.addEventListener('input', e => {
+        const pct = parseInt(e.target.value, 10);
+        state.bumpiness = pct / 100;
+        valBump.textContent = `${pct}%`;
+      });
+
+      const sliderTime = document.getElementById('sliderTime');
+      const valTime = document.getElementById('valTime');
+      const timePresets = document.querySelectorAll('.time-preset');
+
+      function updateTimeLabel(val) {
+        if (val < 35) valTime.textContent = '白天 Day';
+        else if (val < 70) valTime.textContent = '黃昏 Sunset';
+        else valTime.textContent = '夜晚 Night';
+      }
+
+      sliderTime.addEventListener('input', e => {
+        const val = parseFloat(e.target.value);
+        state.timeOfDay = val / 100;
+        updateTimeLabel(val);
+        timePresets.forEach(b => b.classList.remove('active'));
+      });
+
+      timePresets.forEach(btn => {
+        btn.addEventListener('click', () => {
+          timePresets.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const tVal = parseFloat(btn.dataset.time);
+          sliderTime.value = tVal;
+          state.timeOfDay = tVal / 100;
+          updateTimeLabel(tVal);
+        });
+      });
+
+      // Helper for exclusive button groups
+      function bindPillGroup(selector, dataKey, callback) {
+        const buttons = document.querySelectorAll(selector);
+        buttons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            callback(btn.dataset[dataKey]);
+          });
+        });
+      }
+
+      bindPillGroup('.grav-btn', 'gravity', val => { state.gravityMode = val; });
+      bindPillGroup('.helmet-btn', 'helmet', val => { state.helmetColor = val; });
+      bindPillGroup('.scooter-btn', 'scooter', val => { state.scooterStyle = val; });
+      bindPillGroup('.acc-btn', 'acc', val => { state.accessory = val; });
+      bindPillGroup('.weather-btn', 'weather', val => { state.weather = val; });
+
+      // Scarf color buttons
+      const scarfBtns = document.querySelectorAll('.scarf-btn');
+      scarfBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          scarfBtns.forEach(b => {
+            b.classList.remove('ring-2', 'ring-white', 'scale-110');
+            b.classList.add('opacity-75');
+          });
+          btn.classList.remove('opacity-75');
+          btn.classList.add('ring-2', 'ring-white', 'scale-110');
+          state.scarfColor = btn.dataset.scarf;
+        });
+      });
+
+      // Action Buttons
+      document.getElementById('btnHonk').addEventListener('click', triggerHonk);
+      document.getElementById('btnFeed').addEventListener('click', triggerFeedTreat);
+      document.getElementById('btnSpawnObstacle').addEventListener('click', () => {
+        spawnObstacleAt(W * 0.85);
+      });
+
+      // Click anywhere on canvas to place obstacle
+      canvas.addEventListener('pointerdown', e => {
+        const clickX = Math.max(W * 0.48, e.clientX);
+        spawnObstacleAt(clickX, e.clientY);
+      });
+
+      // Keyboard Shortcuts (Space/H = Honk, F = Feed)
+      window.addEventListener('keydown', e => {
+        if (e.code === 'Space' || e.key.toLowerCase() === 'h') {
+          e.preventDefault();
+          triggerHonk();
+        } else if (e.key.toLowerCase() === 'f') {
+          triggerFeedTreat();
+        }
+      });
+
+      // Toggle Right Control Panel
+      const controlPanel = document.getElementById('controlPanel');
+      const btnTogglePanel = document.getElementById('btnTogglePanel');
+      const btnShowPanel = document.getElementById('btnShowPanel');
+
+      btnTogglePanel.addEventListener('click', () => {
+        controlPanel.style.transform = 'translateX(110%)';
+        btnShowPanel.classList.remove('hidden');
+        btnShowPanel.classList.add('flex');
+      });
+
+      btnShowPanel.addEventListener('click', () => {
+        controlPanel.style.transform = 'translateX(0)';
+        btnShowPanel.classList.add('hidden');
+        btnShowPanel.classList.remove('flex');
+      });
+    })();
+  </script>
+</body>
+</html>
