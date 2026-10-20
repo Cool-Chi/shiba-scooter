@@ -1,1 +1,1 @@
-# shuba-scooter
+# shiba-scooter
