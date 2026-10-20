@@ -105,247 +105,223 @@
   <!-- Fullscreen Interactive Canvas -->
   <canvas id="simCanvas" class="block w-full h-full cursor-crosshair"></canvas>
 
-  <!-- TOP TELEMETRY BAR (即時數據看板) -->
+  <!-- TOP TELEMETRY BAR (Apple Design) -->
   <header class="fixed top-4 left-4 right-4 z-20 flex flex-wrap items-center justify-between gap-3 pointer-events-none">
     <!-- Brand & Rider Tag -->
-    <div class="glass-panel px-4 py-2.5 rounded-2xl flex items-center gap-3 pointer-events-auto">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
+    <div class="vibrancy-panel px-4 py-3 flex items-center gap-3 pointer-events-auto">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-md">
         <i class="fa-solid fa-dog text-white text-xl"></i>
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="font-black tracking-wide text-base text-white">SHIBA SPEEDWAY</h1>
-          <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30">
+          <h1 class="font-rounded font-semibold tracking-tight text-[17px] text-white">Shiba Speedway</h1>
+          <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/20">
             Rider: 咚咚
           </span>
         </div>
-        <p class="text-xs text-slate-300/80">點擊路面放置障礙物 · 空白鍵按喇叭 · F 鍵餵食</p>
+        <p class="text-[12px] text-gray-300/80 font-medium tracking-wide">點擊路面放障礙 · 底部按鈕互動</p>
       </div>
     </div>
 
     <!-- Real-time Telemetry Readouts -->
-    <div class="glass-panel px-5 py-2.5 rounded-2xl flex flex-wrap items-center gap-5 md:gap-7 pointer-events-auto">
+    <div class="vibrancy-panel px-5 py-3 flex flex-wrap items-center gap-6 pointer-events-auto">
       <!-- Speed -->
-      <div class="flex items-center gap-2.5">
-        <i class="fa-solid fa-gauge-high text-amber-400 text-lg"></i>
-        <div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-400">時速 Speed</div>
-          <div class="font-tech text-xl font-bold text-white leading-tight">
-            <span id="teleSpeed">45</span> <span class="text-xs font-normal text-slate-300">km/h</span>
-          </div>
+      <div class="flex flex-col">
+        <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-0.5">Speed</div>
+        <div class="font-rounded text-[22px] font-semibold text-white leading-none">
+          <span id="teleSpeed">45</span><span class="text-[13px] font-medium text-gray-300 ml-0.5">km/h</span>
         </div>
       </div>
 
-      <div class="h-7 w-[1px] bg-white/10 hidden sm:block"></div>
+      <div class="h-8 w-[0.5px] bg-white/15 hidden sm:block"></div>
 
       <!-- Distance -->
-      <div class="flex items-center gap-2.5">
-        <i class="fa-solid fa-route text-sky-400 text-lg"></i>
-        <div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-400">距離 Distance</div>
-          <div class="font-tech text-xl font-bold text-white leading-tight">
-            <span id="teleDist">0.0</span> <span class="text-xs font-normal text-slate-300">m</span>
-          </div>
+      <div class="flex flex-col">
+        <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-0.5">Distance</div>
+        <div class="font-rounded text-[22px] font-semibold text-white leading-none">
+          <span id="teleDist">0.0</span><span class="text-[13px] font-medium text-gray-300 ml-0.5">m</span>
         </div>
       </div>
 
-      <div class="h-7 w-[1px] bg-white/10 hidden sm:block"></div>
+      <div class="h-8 w-[0.5px] bg-white/15 hidden sm:block"></div>
 
       <!-- KPM -->
-      <div class="flex items-center gap-2.5">
-        <i class="fa-solid fa-shoe-prints text-emerald-400 text-lg"></i>
-        <div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-400">蹬地頻率 KPM</div>
-          <div class="font-tech text-xl font-bold text-white leading-tight">
-            <span id="teleKpm">82</span> <span class="text-xs font-normal text-slate-300">/min</span>
-          </div>
+      <div class="flex flex-col">
+        <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-0.5">KPM</div>
+        <div class="font-rounded text-[22px] font-semibold text-white leading-none">
+          <span id="teleKpm">82</span>
         </div>
       </div>
 
-      <div class="h-7 w-[1px] bg-white/10 hidden sm:block"></div>
+      <div class="h-8 w-[0.5px] bg-white/15 hidden sm:block"></div>
 
       <!-- G-Force -->
-      <div class="flex items-center gap-2.5">
-        <i class="fa-solid fa-wave-square text-purple-400 text-lg"></i>
-        <div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-400">顛簸 G 值</div>
-          <div class="font-tech text-xl font-bold text-white leading-tight">
-            <span id="teleG">1.00</span> <span class="text-xs font-normal text-slate-300">G</span>
-          </div>
+      <div class="flex flex-col">
+        <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-0.5">G-Force</div>
+        <div class="font-rounded text-[22px] font-semibold text-white leading-none">
+          <span id="teleG">1.00</span><span class="text-[13px] font-medium text-gray-300 ml-0.5">G</span>
         </div>
       </div>
 
-      <div class="h-7 w-[1px] bg-white/10 hidden sm:block"></div>
+      <div class="h-8 w-[0.5px] bg-white/15 hidden sm:block"></div>
 
       <!-- Happiness -->
-      <div class="flex items-center gap-2.5">
-        <i class="fa-solid fa-heart text-rose-400 text-lg animate-pulse"></i>
-        <div>
-          <div class="text-[10px] uppercase tracking-wider text-slate-400">快樂指數 Mood</div>
-          <div class="font-tech text-xl font-bold text-rose-300 leading-tight">
-            <span id="teleHappy">98</span><span class="text-xs font-normal text-rose-200">%</span>
-          </div>
+      <div class="flex flex-col">
+        <div class="text-[10px] uppercase tracking-wider text-gray-400 font-medium mb-0.5 flex items-center gap-1">Mood <i class="fa-solid fa-heart text-red-500 text-[9px] animate-pulse"></i></div>
+        <div class="font-rounded text-[22px] font-semibold text-red-400 leading-none">
+          <span id="teleHappy">98</span><span class="text-[13px] font-medium text-red-300 ml-0.5">%</span>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- BOTTOM-LEFT INTERACTIVE ACTION BUTTONS (按喇叭 & 餵食 & 障礙物) -->
-  <div class="fixed bottom-5 left-5 z-20 flex flex-wrap items-center gap-3">
-    <button id="btnHonk" class="glass-panel hover:bg-amber-500/30 active:scale-95 transition-all px-5 py-3 rounded-2xl flex items-center gap-2.5 font-bold text-sm text-amber-200 border border-amber-400/40 shadow-lg">
-      <i class="fa-solid fa-bullhorn text-amber-400 text-base"></i>
-      <span>按喇叭 (Honk!)</span>
+  <!-- BOTTOM FLOATING ACTION BUTTONS -->
+  <div class="fixed bottom-6 left-6 z-20 flex flex-col gap-4">
+    <button id="btnHonk" class="fab fab-secondary" title="Honk">
+      <i class="fa-solid fa-bullhorn"></i>
     </button>
-
-    <button id="btnFeed" class="btn-action glass-panel hover:bg-rose-500/30 active:scale-95 transition-all px-5 py-3 rounded-2xl flex items-center gap-2.5 font-bold text-sm text-rose-200 border border-rose-400/40 shadow-lg">
-      <i class="fa-solid fa-bone text-rose-400 text-base"></i>
-      <span>餵食骨頭 (Feed Treat!)</span>
-    </button>
-
-    <button id="btnSpawnObstacle" class="glass-panel hover:bg-sky-500/30 active:scale-95 transition-all px-4 py-3 rounded-2xl flex items-center gap-2 font-semibold text-xs text-sky-200 border border-sky-400/30">
-      <i class="fa-solid fa-triangle-exclamation text-sky-400"></i>
-      <span>前方放香蕉皮/石頭</span>
+    <button id="btnFeed" class="fab fab-primary btn-action" title="Feed">
+      <i class="fa-solid fa-bone"></i>
     </button>
   </div>
 
-  <!-- RIGHT SIDE GLASSMORPHISM CUSTOMIZER & PHYSICS PANEL -->
-  <aside id="controlPanel" class="fixed top-24 right-4 bottom-5 w-80 md:w-96 z-20 glass-panel rounded-3xl flex flex-col overflow-hidden transition-transform duration-300">
+  <!-- BOTTOM SHEET OVERLAY -->
+  <div id="bottomSheetOverlay" class="fixed inset-0 z-30 bottom-sheet-overlay"></div>
+
+  <!-- BOTTOM SHEET CONTROL PANEL (Apple Design) -->
+  <aside id="controlPanel" class="fixed left-0 right-0 bottom-0 z-40 vibrancy-sheet flex flex-col translate-y-full" style="max-height: 85vh; padding-bottom: env(safe-area-inset-bottom);">
+    <!-- Drag Handle -->
+    <div class="pt-3 pb-2 w-full flex justify-center cursor-pointer" id="dragHandleArea">
+      <div class="drag-handle"></div>
+    </div>
+
     <!-- Panel Header -->
-    <div class="px-5 py-3.5 border-b border-white/10 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <i class="fa-solid fa-sliders text-amber-400"></i>
-        <h2 class="font-bold text-sm tracking-wide text-white">物理模擬與外觀自訂器</h2>
-      </div>
-      <button id="btnTogglePanel" class="text-xs text-slate-300 hover:text-white px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition">
-        <i class="fa-solid fa-chevron-right" id="toggleIcon"></i>
+    <div class="px-6 pb-3 border-b border-white/10 flex items-center justify-between">
+      <h2 class="font-rounded font-semibold text-[20px] tracking-tight text-white">Settings</h2>
+      <button id="btnTogglePanelClose" class="text-[15px] font-semibold text-[#0A84FF] bg-white/10 px-3 py-1.5 rounded-full active:bg-white/20 transition">
+        Done
       </button>
     </div>
 
     <!-- Scrollable Controls Content -->
-    <div class="p-5 overflow-y-auto custom-scroll flex-1 space-y-5 text-xs">
+    <div class="p-6 overflow-y-auto no-scrollbar flex-1 space-y-7 text-[13px]">
 
       <!-- SECTION 1: 物理與環境數值 -->
-      <div class="space-y-3.5">
-        <div class="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-          <i class="fa-solid fa-atom"></i> 物理與環境數值
+      <div class="space-y-4">
+        <div class="text-[12px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
+          Physics & Environment
         </div>
 
         <!-- Speed Slider -->
-        <div class="space-y-1.5">
-          <div class="flex justify-between items-center">
-            <span class="text-slate-200 font-medium">巡航速度 (Speed)</span>
-            <span id="valSpeed" class="font-tech font-bold text-amber-300">48 km/h</span>
+        <div class="vibrancy-panel p-4">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-white font-medium">Target Speed</span>
+            <span id="valSpeed" class="font-rounded font-semibold text-white">48 km/h</span>
           </div>
           <input id="sliderSpeed" type="range" min="0" max="120" value="48" step="1" />
         </div>
 
         <!-- Bumpy Terrain Slider -->
-        <div class="space-y-1.5">
-          <div class="flex justify-between items-center">
-            <span class="text-slate-200 font-medium">路面顛簸度 (Bumpy Terrain)</span>
-            <span id="valBump" class="font-tech font-bold text-amber-300">25%</span>
+        <div class="vibrancy-panel p-4">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-white font-medium">Bumpy Terrain</span>
+            <span id="valBump" class="font-rounded font-semibold text-white">25%</span>
           </div>
           <input id="sliderBump" type="range" min="0" max="100" value="25" step="1" />
         </div>
 
         <!-- Day / Night Cycle -->
-        <div class="space-y-2">
-          <div class="flex justify-between items-center">
-            <span class="text-slate-200 font-medium">日夜周期 (Day/Night Cycle)</span>
-            <span id="valTime" class="font-tech font-bold text-sky-300">白天 Day</span>
+        <div class="vibrancy-panel p-4">
+          <div class="flex justify-between items-center mb-3">
+            <span class="text-white font-medium">Time of Day</span>
+            <span id="valTime" class="font-rounded font-semibold text-[#0A84FF]">Day</span>
           </div>
-          <input id="sliderTime" type="range" min="0" max="100" value="15" step="1" />
-          <div class="grid grid-cols-3 gap-2 pt-1">
-            <button data-time="12" class="time-preset glass-pill active py-1.5 rounded-xl font-medium text-center">
-              <i class="fa-solid fa-sun mr-1 text-amber-300"></i>白天
+          <input id="sliderTime" type="range" min="0" max="100" value="15" step="1" class="mb-4" />
+          <div class="grid grid-cols-3 gap-2 bg-black/20 p-1 rounded-[14px]">
+            <button data-time="12" class="time-preset ios-pill active py-1.5 text-center">
+              Day
             </button>
-            <button data-time="52" class="time-preset glass-pill py-1.5 rounded-xl font-medium text-center">
-              <i class="fa-solid fa-cloud-sun mr-1 text-orange-400"></i>黃昏
+            <button data-time="52" class="time-preset ios-pill py-1.5 text-center">
+              Sunset
             </button>
-            <button data-time="88" class="time-preset glass-pill py-1.5 rounded-xl font-medium text-center">
-              <i class="fa-solid fa-moon mr-1 text-indigo-300"></i>夜晚
+            <button data-time="88" class="time-preset ios-pill py-1.5 text-center">
+              Night
             </button>
           </div>
         </div>
 
         <!-- Gravity / Physics Mode -->
-        <div class="space-y-1.5">
-          <span class="text-slate-200 font-medium block">重力 / 物理模式 (Physics Mode)</span>
-          <div class="grid grid-cols-3 gap-2">
-            <button data-gravity="normal" class="grav-btn glass-pill active py-2 rounded-xl font-medium text-center">
-              <i class="fa-solid fa-earth-asia mr-1"></i>普通
-            </button>
-            <button data-gravity="moon" class="grav-btn glass-pill py-2 rounded-xl font-medium text-center">
-              <i class="fa-solid fa-user-astronaut mr-1"></i>月球低重力
-            </button>
-            <button data-gravity="turbo" class="grav-btn glass-pill py-2 rounded-xl font-medium text-center">
-              <i class="fa-solid fa-bolt mr-1"></i>極限加速
-            </button>
+        <div class="vibrancy-panel p-4">
+          <span class="text-white font-medium block mb-3">Physics Mode</span>
+          <div class="grid grid-cols-3 gap-2 bg-black/20 p-1 rounded-[14px]">
+            <button data-gravity="normal" class="grav-btn ios-pill active py-1.5 text-center">Normal</button>
+            <button data-gravity="moon" class="grav-btn ios-pill py-1.5 text-center">Moon</button>
+            <button data-gravity="turbo" class="grav-btn ios-pill py-1.5 text-center">Turbo</button>
           </div>
         </div>
       </div>
 
-      <hr class="border-white/10" />
-
       <!-- SECTION 2: 外觀自訂與配件 -->
-      <div class="space-y-3.5">
-        <div class="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-          <i class="fa-solid fa-palette"></i> 外觀自訂與配件
+      <div class="space-y-4">
+        <div class="text-[12px] font-semibold uppercase tracking-wider text-gray-400 mb-2 mt-4">
+          Customization
         </div>
 
         <!-- Helmet Color -->
-        <div class="space-y-1.5">
-          <span class="text-slate-200 font-medium block">頭盔顏色 (Helmet)</span>
-          <div class="grid grid-cols-4 gap-2">
-            <button data-helmet="red" class="helmet-btn glass-pill active py-1.5 rounded-xl font-medium text-center">🔴 烈焰紅</button>
-            <button data-helmet="blue" class="helmet-btn glass-pill py-1.5 rounded-xl font-medium text-center">🔵 鈷藍</button>
-            <button data-helmet="gold" class="helmet-btn glass-pill py-1.5 rounded-xl font-medium text-center">🟡 黃金</button>
-            <button data-helmet="cyber" class="helmet-btn glass-pill py-1.5 rounded-xl font-medium text-center">🟣 霓虹</button>
-          </div>
-        </div>
-
-        <!-- Scooter Style -->
-        <div class="space-y-1.5">
-          <span class="text-slate-200 font-medium block">車身風格 (Scooter Style)</span>
-          <div class="grid grid-cols-3 gap-2">
-            <button data-scooter="classic" class="scooter-btn glass-pill active py-2 rounded-xl font-medium text-center">經典運動</button>
-            <button data-scooter="cyberpunk" class="scooter-btn glass-pill py-2 rounded-xl font-medium text-center">Cyberpunk</button>
-            <button data-scooter="wood" class="scooter-btn glass-pill py-2 rounded-xl font-medium text-center">復古木質</button>
-          </div>
-        </div>
-
-        <!-- Shiba Head/Eye Accessory -->
-        <div class="space-y-1.5">
-          <span class="text-slate-200 font-medium block">柴犬配件 (Shiba Gear)</span>
-          <div class="grid grid-cols-3 gap-2">
-            <button data-acc="goggles" class="acc-btn glass-pill active py-2 rounded-xl font-medium text-center">飛行護目鏡</button>
-            <button data-acc="sunglasses" class="acc-btn glass-pill py-2 rounded-xl font-medium text-center">墨鏡 + 竹蜻蜓</button>
-            <button data-acc="propeller" class="acc-btn glass-pill py-2 rounded-xl font-medium text-center">竹蜻蜓風扇</button>
+        <div class="vibrancy-panel p-4">
+          <span class="text-white font-medium block mb-3">Helmet Color</span>
+          <div class="grid grid-cols-4 gap-2 bg-black/20 p-1 rounded-[14px]">
+            <button data-helmet="red" class="helmet-btn ios-pill active py-1.5 text-center">Red</button>
+            <button data-helmet="blue" class="helmet-btn ios-pill py-1.5 text-center">Blue</button>
+            <button data-helmet="gold" class="helmet-btn ios-pill py-1.5 text-center">Gold</button>
+            <button data-helmet="cyber" class="helmet-btn ios-pill py-1.5 text-center">Neon</button>
           </div>
         </div>
 
         <!-- Scarf Color -->
-        <div class="space-y-1.5">
-          <span class="text-slate-200 font-medium block">飄逸圍巾顏色 (Scarf Color)</span>
-          <div class="flex items-center gap-2.5 pt-0.5">
-            <button data-scarf="#ef4444" class="scarf-btn w-7 h-7 rounded-full bg-red-500 ring-2 ring-white scale-110 transition"></button>
-            <button data-scarf="#f97316" class="scarf-btn w-7 h-7 rounded-full bg-orange-500 opacity-75 hover:opacity-100 transition"></button>
-            <button data-scarf="#10b981" class="scarf-btn w-7 h-7 rounded-full bg-emerald-500 opacity-75 hover:opacity-100 transition"></button>
-            <button data-scarf="#06b6d4" class="scarf-btn w-7 h-7 rounded-full bg-cyan-500 opacity-75 hover:opacity-100 transition"></button>
-            <button data-scarf="#a855f7" class="scarf-btn w-7 h-7 rounded-full bg-purple-500 opacity-75 hover:opacity-100 transition"></button>
+        <div class="vibrancy-panel p-4">
+          <span class="text-white font-medium block mb-3">Scarf Color</span>
+          <div class="flex items-center gap-3">
+            <button data-scarf="#ef4444" class="scarf-btn w-8 h-8 rounded-full bg-red-500 ring-2 ring-white scale-110 transition"></button>
+            <button data-scarf="#f97316" class="scarf-btn w-8 h-8 rounded-full bg-orange-500 opacity-75 hover:opacity-100 transition"></button>
+            <button data-scarf="#10b981" class="scarf-btn w-8 h-8 rounded-full bg-emerald-500 opacity-75 hover:opacity-100 transition"></button>
+            <button data-scarf="#06b6d4" class="scarf-btn w-8 h-8 rounded-full bg-cyan-500 opacity-75 hover:opacity-100 transition"></button>
+            <button data-scarf="#a855f7" class="scarf-btn w-8 h-8 rounded-full bg-purple-500 opacity-75 hover:opacity-100 transition"></button>
+          </div>
+        </div>
+
+        <!-- Scooter Style -->
+        <div class="vibrancy-panel p-4">
+          <span class="text-white font-medium block mb-3">Scooter Style</span>
+          <div class="grid grid-cols-3 gap-2 bg-black/20 p-1 rounded-[14px]">
+            <button data-scooter="classic" class="scooter-btn ios-pill active py-1.5 text-center">Classic</button>
+            <button data-scooter="cyberpunk" class="scooter-btn ios-pill py-1.5 text-center">Cyber</button>
+            <button data-scooter="wood" class="scooter-btn ios-pill py-1.5 text-center">Wood</button>
+          </div>
+        </div>
+
+        <!-- Shiba Head/Eye Accessory -->
+        <div class="vibrancy-panel p-4">
+          <span class="text-white font-medium block mb-3">Accessories</span>
+          <div class="grid grid-cols-3 gap-2 bg-black/20 p-1 rounded-[14px]">
+            <button data-acc="goggles" class="acc-btn ios-pill active py-1.5 text-center">Goggles</button>
+            <button data-acc="sunglasses" class="acc-btn ios-pill py-1.5 text-center">Shades</button>
+            <button data-acc="propeller" class="acc-btn ios-pill py-1.5 text-center">Propeller</button>
           </div>
         </div>
 
         <!-- Weather / Environment Particles -->
-        <div class="space-y-1.5">
-          <span class="text-slate-200 font-medium block">環境粒子特效 (Weather & Particles)</span>
-          <div class="grid grid-cols-3 gap-2">
-            <button data-weather="sakura" class="weather-btn glass-pill active py-2 rounded-xl font-medium text-center">🌸 櫻花瓣</button>
-            <button data-weather="leaves" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">🍁 秋葉</button>
-            <button data-weather="fireflies" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">✨ 螢火蟲</button>
-            <button data-weather="rain" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">🌧️ 雨滴</button>
-            <button data-weather="snow" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">❄️ 雪花</button>
-            <button data-weather="clear" class="weather-btn glass-pill py-2 rounded-xl font-medium text-center">☀️ 晴朗無粒子</button>
+        <div class="vibrancy-panel p-4">
+          <span class="text-white font-medium block mb-3">Weather FX</span>
+          <div class="grid grid-cols-3 gap-2 bg-black/20 p-1 rounded-[14px] mb-2">
+            <button data-weather="sakura" class="weather-btn ios-pill active py-1.5 text-center">Sakura</button>
+            <button data-weather="leaves" class="weather-btn ios-pill py-1.5 text-center">Leaves</button>
+            <button data-weather="fireflies" class="weather-btn ios-pill py-1.5 text-center">Fireflies</button>
+          </div>
+          <div class="grid grid-cols-3 gap-2 bg-black/20 p-1 rounded-[14px]">
+            <button data-weather="rain" class="weather-btn ios-pill py-1.5 text-center">Rain</button>
+            <button data-weather="snow" class="weather-btn ios-pill py-1.5 text-center">Snow</button>
+            <button data-weather="clear" class="weather-btn ios-pill py-1.5 text-center">Clear</button>
           </div>
         </div>
       </div>
@@ -353,9 +329,9 @@
     </div>
   </aside>
 
-  <!-- Floating Restore Panel Button when collapsed -->
-  <button id="btnShowPanel" class="fixed top-24 right-4 z-10 glass-panel px-4 py-2.5 rounded-2xl text-xs font-bold text-amber-300 hidden items-center gap-2 hover:bg-white/10 transition">
-    <i class="fa-solid fa-sliders"></i> 展開控制面板
+  <!-- FAB to Open Settings -->
+  <button id="btnShowPanel" class="fixed top-24 right-4 z-10 vibrancy-panel px-4 py-2.5 rounded-full text-[13px] font-semibold text-white flex items-center gap-2 transition hover:scale-105 active:scale-95">
+    <i class="fa-solid fa-sliders text-white"></i> Settings
   </button>
 
   <script>
@@ -2163,9 +2139,6 @@
       // Action Buttons
       document.getElementById('btnHonk').addEventListener('click', triggerHonk);
       document.getElementById('btnFeed').addEventListener('click', triggerFeedTreat);
-      document.getElementById('btnSpawnObstacle').addEventListener('click', () => {
-        spawnObstacleAt(W * 0.85);
-      });
 
       // Click anywhere on canvas to place obstacle
       canvas.addEventListener('pointerdown', e => {
@@ -2183,22 +2156,62 @@
         }
       });
 
-      // Toggle Right Control Panel
-      const controlPanel = document.getElementById('controlPanel');
-      const btnTogglePanel = document.getElementById('btnTogglePanel');
-      const btnShowPanel = document.getElementById('btnShowPanel');
+      // Bottom Sheet Logic
+      const controlPanel = document.getElementById("controlPanel");
+      const btnTogglePanelClose = document.getElementById("btnTogglePanelClose");
+      const btnShowPanel = document.getElementById("btnShowPanel");
+      const bottomSheetOverlay = document.getElementById("bottomSheetOverlay");
+      const dragHandleArea = document.getElementById("dragHandleArea");
 
-      btnTogglePanel.addEventListener('click', () => {
-        controlPanel.style.transform = 'translateX(110%)';
-        btnShowPanel.classList.remove('hidden');
-        btnShowPanel.classList.add('flex');
-      });
+      function closeSheet() {
+        controlPanel.style.transform = "translateY(100%)";
+        bottomSheetOverlay.classList.remove("active");
+        btnShowPanel.style.display = "flex";
+      }
 
-      btnShowPanel.addEventListener('click', () => {
-        controlPanel.style.transform = 'translateX(0)';
-        btnShowPanel.classList.add('hidden');
-        btnShowPanel.classList.remove('flex');
-      });
+      function openSheet() {
+        controlPanel.style.transform = "translateY(0)";
+        bottomSheetOverlay.classList.add("active");
+        btnShowPanel.style.display = "none";
+      }
+
+      if(btnTogglePanelClose) btnTogglePanelClose.addEventListener("click", closeSheet);
+      btnShowPanel.addEventListener("click", openSheet);
+      bottomSheetOverlay.addEventListener("click", closeSheet);
+      if(dragHandleArea) {
+        dragHandleArea.addEventListener("click", closeSheet);
+
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+
+        dragHandleArea.addEventListener("touchstart", (e) => {
+          startY = e.touches[0].clientY;
+          isDragging = true;
+          controlPanel.style.transition = "none";
+        }, { passive: true });
+
+        dragHandleArea.addEventListener("touchmove", (e) => {
+          if (!isDragging) return;
+          currentY = e.touches[0].clientY - startY;
+          if (currentY > 0) {
+            controlPanel.style.transform = `translateY(${currentY}px)`;
+          }
+        }, { passive: true });
+
+        dragHandleArea.addEventListener("touchend", () => {
+          if (!isDragging) return;
+          isDragging = false;
+          controlPanel.style.transition = "transform 0.4s cubic-bezier(0.32, 0.72, 0, 1)";
+          if (currentY > 100) {
+            closeSheet();
+          } else {
+            openSheet();
+          }
+          currentY = 0;
+        });
+      }
+
     })();
   </script>
 </body>
